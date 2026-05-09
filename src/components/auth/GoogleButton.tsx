@@ -3,7 +3,19 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
-export function GoogleButton({ redirect }: { redirect?: string | null }) {
+type GoogleButtonProps = {
+  redirect?: string | null;
+  role?: "employee" | "admin";
+  variant?: "light" | "dark";
+  label?: string;
+};
+
+export function GoogleButton({
+  redirect,
+  role = "employee",
+  variant = "light",
+  label,
+}: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,6 +26,10 @@ export function GoogleButton({ redirect }: { redirect?: string | null }) {
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     if (redirect) callbackUrl.searchParams.set("redirect", redirect);
+    // Conveys admin intent to the callback route — the trigger insert always
+    // defaults to 'employee' for OAuth, so the callback elevates the role
+    // when 'intent=admin' is present and the profile is freshly created.
+    if (role === "admin") callbackUrl.searchParams.set("intent", "admin");
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -26,8 +42,12 @@ export function GoogleButton({ redirect }: { redirect?: string | null }) {
       setError(error.message);
       setLoading(false);
     }
-    // On success the browser is redirected by Supabase; no further action here.
   }
+
+  const isDark = variant === "dark";
+  const buttonClass = isDark
+    ? "flex w-full items-center justify-center gap-3 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-100 transition-colors hover:border-neutral-600 hover:bg-neutral-800 disabled:opacity-60"
+    : "flex w-full items-center justify-center gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50 disabled:opacity-60";
 
   return (
     <div className="space-y-2">
@@ -35,19 +55,23 @@ export function GoogleButton({ redirect }: { redirect?: string | null }) {
         type="button"
         onClick={onClick}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+        className={buttonClass}
       >
         <GoogleIcon />
-        {loading ? "Redirecting…" : "Continue with Google"}
+        {loading ? "Redirecting…" : (label ?? "Continue with Google")}
       </button>
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && (
+        <p className={isDark ? "text-sm text-rose-400" : "text-sm text-rose-600"}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path
         fill="#4285F4"
         d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"

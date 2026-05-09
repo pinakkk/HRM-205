@@ -150,7 +150,7 @@ The system applies **three AI layers** on top of a conventional reward portal:
 |---|---|---|
 | **Framework** | Next.js 15 (App Router) | RSC, server actions, edge-ready, single deploy. |
 | **Language** | TypeScript (strict) | Type safety end-to-end. |
-| **Styling** | Tailwind CSS 4 + shadcn/ui | Consistent design tokens, accessible primitives. |
+| **Styling** | Tailwind CSS 4 + custom UI primitives | Consistent design tokens, accessible primitives owned in-repo (no shadcn). |
 | **Charts** | Recharts + Tremor | Production-grade analytics components. |
 | **Auth & DB** | Supabase (Postgres 15, Auth, Realtime, Storage) | RLS, realtime channels, generous free tier. |
 | **Caching / Rate Limit** | Upstash Redis (REST) | Edge-compatible; `@upstash/ratelimit` library. |
@@ -158,7 +158,7 @@ The system applies **three AI layers** on top of a conventional reward portal:
 | **Validation** | Zod | Schema validation for forms + API boundaries. |
 | **State** | TanStack Query + Zustand | Query for server state, Zustand for UI state only. |
 | **Email** | Resend | Transactional notifications (admin invites, weekly summaries). |
-| **Observability** | Vercel Analytics + Sentry (free tier) | Errors + perf. |
+| **Observability** | Vercel Analytics | Built-in metrics from Vercel deploy. |
 | **Hosting** | Vercel | Native Next.js, preview deploys per PR. |
 
 ### 5.2 Justification for Key Choices
@@ -718,7 +718,7 @@ fairreward-ai/
     │           └── export/csv/route.ts
     │
     ├── components/
-    │   ├── ui/                      # shadcn primitives
+    │   ├── ui/                      # custom in-repo primitives (Button, Card, Dialog, Input, etc.)
     │   ├── charts/
     │   │   ├── PointsTrend.tsx
     │   │   ├── DistributionByGender.tsx
@@ -791,7 +791,7 @@ fairreward-ai/
 ### 14.3 Accessibility
 
 - All interactive elements WCAG AA.
-- shadcn/ui primitives ship accessible defaults.
+- Custom UI primitives in `components/ui/` ship accessible defaults (focus rings, ARIA labels, keyboard nav) — modelled on Radix/Headless UI patterns but owned in-repo so we control bundle size and theming.
 - Charts have data-table fallbacks via `aria-describedby`.
 
 ---
@@ -820,11 +820,9 @@ fairreward-ai/
 | Unit (lib/) | Vitest | 80% |
 | Component | Vitest + Testing Library | Smoke on key components |
 | API routes | Vitest + supertest-style harness | All happy + 1 error path |
-| E2E | Playwright | Login → check-in → award → redeem flow |
 | Database | pgTAP migrations test | RLS policies behave |
-| Load | k6 (optional) | Leaderboard p95 < 200ms |
 
-CI runs lint, typecheck, vitest, and Playwright headless on every PR.
+Tests are run locally before deploys via `npm test` and `supabase test db`.
 
 ---
 
@@ -846,9 +844,8 @@ SUPABASE_SERVICE_ROLE_KEY=          # server only
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 OPENROUTER_API_KEY=
-OPENROUTER_DEFAULT_MODEL=anthropic/claude-haiku-4.5
+OPENROUTER_DEFAULT_MODEL=openai/gpt-4o-mini
 RESEND_API_KEY=
-SENTRY_DSN=
 APP_URL=https://fairreward.app
 ```
 
@@ -864,9 +861,9 @@ APP_URL=https://fairreward.app
 
 - [ ] All migrations applied via `supabase db push`.
 - [ ] Seed runs idempotent.
-- [ ] Sentry DSN active.
+- [ ] Vercel Analytics enabled in project settings.
 - [ ] OpenRouter spend cap set.
-- [ ] Smoke E2E green on preview.
+- [ ] `npm test` and `supabase test db` green locally before deploy.
 - [ ] Lighthouse ≥ 90 (Perf/A11y/Best Practices).
 - [ ] Privacy notice + consent screen live.
 
@@ -880,9 +877,8 @@ APP_URL=https://fairreward.app
 
 - Provision Supabase project, Upstash Redis DB, OpenRouter key, Vercel project, Resend key.
 - `pnpm create next-app` with App Router + TS + Tailwind.
-- Install deps: `@supabase/ssr`, `@supabase/supabase-js`, `@upstash/redis`, `@upstash/ratelimit`, `zod`, `@tanstack/react-query`, `recharts`, `@tremor/react`, `lucide-react`, shadcn/ui.
-- ESLint + Prettier + Husky pre-commit.
-- GitHub Actions: lint + typecheck + vitest.
+- Install deps: `@supabase/ssr`, `@supabase/supabase-js`, `@upstash/redis`, `@upstash/ratelimit`, `zod`, `@tanstack/react-query`, `recharts`, `@tremor/react`, `lucide-react`. UI primitives are hand-rolled in `src/components/ui/` (no shadcn).
+- ESLint + Prettier.
 - Wire `.env.example`; deploy empty app to Vercel.
 
 **Exit criteria:** preview URL renders "Hello FairReward".
@@ -963,7 +959,7 @@ APP_URL=https://fairreward.app
 - Empty states, skeletons, toast feedback.
 - Dark mode.
 - Confetti on badge unlock.
-- Observability: Sentry + Vercel Analytics live.
+- Observability: Vercel Analytics live.
 - Privacy & consent screen.
 - README with architecture summary.
 
@@ -976,13 +972,12 @@ APP_URL=https://fairreward.app
 **Goal:** ship confidence.
 
 - Vitest unit + component tests for core libs and components.
-- Playwright E2E: signup → check-in → kudos → admin awards → redemption.
 - pgTAP migration test for RLS.
 - Lighthouse audit; fix to ≥ 90.
 - Domain configured (or `*.vercel.app`).
 - Final demo seed run.
 
-**Exit criteria:** CI green, Lighthouse ≥ 90, production deploy on `main`.
+**Exit criteria:** `npm test` green, Lighthouse ≥ 90, production deploy on `main`.
 
 ---
 

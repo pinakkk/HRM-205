@@ -7,15 +7,12 @@ const serverSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url().optional().or(z.literal("")),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional().or(z.literal("")),
   OPENROUTER_API_KEY: z.string().optional().or(z.literal("")),
-  OPENROUTER_DEFAULT_MODEL: z.string().default("openai/gpt-4o-mini"),
-  OPENROUTER_ALLOCATOR_MODEL: z.string().default("openai/gpt-4o"),
-  OPENROUTER_NARRATOR_MODEL: z.string().default("openai/gpt-4o-mini"),
+  OPENROUTER_DEFAULT_MODEL: z.string().default("openai/gpt-5.4-mini"),
+  OPENROUTER_ALLOCATOR_MODEL: z.string().default("openai/gpt-5.5"),
+  OPENROUTER_NARRATOR_MODEL: z.string().default("openai/gpt-5.4-mini"),
   RESEND_API_KEY: z.string().optional().or(z.literal("")),
   APP_URL: z.string().url().default("http://localhost:3000"),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-  ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional().or(z.literal("")),
-  ADMIN_BOOTSTRAP_PASSWORD: z.string().min(8).optional().or(z.literal("")),
-  ADMIN_BOOTSTRAP_NAME: z.string().optional().or(z.literal("")),
 });
 
 export const env = serverSchema.parse({
@@ -31,9 +28,6 @@ export const env = serverSchema.parse({
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   APP_URL: process.env.APP_URL,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
-  ADMIN_BOOTSTRAP_PASSWORD: process.env.ADMIN_BOOTSTRAP_PASSWORD,
-  ADMIN_BOOTSTRAP_NAME: process.env.ADMIN_BOOTSTRAP_NAME,
 });
 
 export type Env = typeof env;
