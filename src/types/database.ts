@@ -40,6 +40,8 @@ export type Database = {
           joined_at: string;
           avatar_url: string | null;
           created_at: string;
+          consent_at: string | null;
+          consent_version: string | null;
         };
         Insert: {
           id: string;
@@ -51,6 +53,8 @@ export type Database = {
           joined_at?: string;
           avatar_url?: string | null;
           created_at?: string;
+          consent_at?: string | null;
+          consent_version?: string | null;
         };
         Update: {
           id?: string;
@@ -62,6 +66,8 @@ export type Database = {
           joined_at?: string;
           avatar_url?: string | null;
           created_at?: string;
+          consent_at?: string | null;
+          consent_version?: string | null;
         };
         Relationships: [];
       };

@@ -9,6 +9,7 @@ const items = [
   { href: "/employee/feedback", label: "Feedback" },
   { href: "/employee/leaderboard", label: "Leaderboard" },
   { href: "/employee/store", label: "Redeem" },
+  { href: "/employee/consent", label: "Privacy" },
 ];
 
 export default async function EmployeeLayout({ children }: { children: React.ReactNode }) {

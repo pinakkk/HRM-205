@@ -11,7 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = Deno.env.get("OPENROUTER_DEFAULT_MODEL") ?? "anthropic/claude-haiku-4.5";
+const MODEL = Deno.env.get("OPENROUTER_DEFAULT_MODEL") ?? "openai/gpt-4o-mini";
 
 const SYSTEM_PROMPT = `You are a feedback sentiment classifier.
 Return strict JSON: { "sentiment": "positive"|"neutral"|"constructive"|"negative", "score": number in [-1,1] }.`;

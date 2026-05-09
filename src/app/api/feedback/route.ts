@@ -1,7 +1,10 @@
 import { z } from "zod";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, problem } from "@/lib/http";
 import { rateLimits } from "@/lib/redis";
+import { classifySentiment } from "@/lib/llm/sentiment";
 
 const bodySchema = z.object({
   to_user_id: z.string().uuid(),
@@ -40,6 +43,26 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return problem(500, "Insert failed", error.message);
-  // L1 sentiment classification is fired from a Supabase edge function trigger.
+
+  // Fire-and-forget sentiment classification. Edge function is the canonical
+  // path in prod; this in-process call ensures the demo works without
+  // deploying a Supabase function.
+  after(async () => {
+    try {
+      const sentiment = await classifySentiment(parsed.data.body);
+      if (!sentiment) return;
+      const admin = createAdminClient();
+      await admin
+        .from("feedback")
+        .update({
+          sentiment: sentiment.sentiment,
+          sentiment_score: sentiment.score,
+        })
+        .eq("id", data.id);
+    } catch {
+      // best-effort
+    }
+  });
+
   return ok({ id: data.id });
 }

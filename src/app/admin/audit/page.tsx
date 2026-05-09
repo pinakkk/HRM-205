@@ -6,9 +6,22 @@ import {
   pairwiseDIR,
   type GroupedRewards,
 } from "@/lib/audit/disparate-impact";
+import { cacheGet, cacheSet } from "@/lib/redis";
+import { proposeBiasNarration } from "@/lib/llm/narrator";
+import type { BiasNarration } from "@/lib/llm/schemas";
+import { env } from "@/lib/env";
 
 type DirRow = { group: string; reference: string; ratio: number | null; flagged: boolean };
 type SkewRow = { manager_id: string; mean: number; n: number; z: number; flagged: boolean };
+
+type Summary = {
+  disparate_impact: { gender: DirRow[]; department: DirRow[] };
+  department_anova: { f: number | null; pApprox: string | null; flagged: boolean };
+  manager_skew: SkewRow[];
+  counts: { rows: number };
+};
+
+const NARRATION_CACHE_KEY = "audit:narration";
 
 export default async function BiasAuditPage() {
   const supabase = await createClient();
@@ -18,14 +31,8 @@ export default async function BiasAuditPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  let summary:
-    | {
-        disparate_impact: { gender: DirRow[]; department: DirRow[] };
-        department_anova: { f: number | null; pApprox: string | null; flagged: boolean };
-        manager_skew: SkewRow[];
-        counts: { rows: number };
-      }
-    | null = null;
+  let summary: Summary | null = null;
+  let narration: BiasNarration | null = null;
 
   try {
     const admin = createAdminClient();
@@ -60,6 +67,16 @@ export default async function BiasAuditPage() {
       manager_skew: managerSkew(perManager),
       counts: { rows: rows?.length ?? 0 },
     };
+
+    if (env.OPENROUTER_API_KEY && summary.counts.rows > 0) {
+      const cached = await cacheGet<BiasNarration>(NARRATION_CACHE_KEY);
+      if (cached) {
+        narration = cached;
+      } else {
+        narration = await proposeBiasNarration(summary);
+        if (narration) await cacheSet(NARRATION_CACHE_KEY, narration, 3600);
+      }
+    }
   } catch {
     summary = null;
   }
@@ -69,8 +86,32 @@ export default async function BiasAuditPage() {
       <h1 className="text-2xl font-bold">Bias Audit</h1>
       <p className="text-sm text-neutral-500">
         Disparate-impact ratio, F-test, and manager-skew detectors run server-side. The LLM
-        narrator paragraph lands in Phase 4.
+        narrator below only describes the numbers — it does not decide them.
       </p>
+
+      {narration ? (
+        <section className="rounded-md border bg-indigo-50/40 p-4 dark:bg-indigo-950/20">
+          <h2 className="text-base font-semibold">{narration.headline}</h2>
+          <div className="mt-2 space-y-2 text-sm leading-relaxed">
+            {narration.paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+          {narration.recommendations.length > 0 && (
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+              {narration.recommendations.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (
+        <section className="rounded-md border border-dashed p-4 text-sm text-neutral-500">
+          {summary?.counts.rows
+            ? "Narrator unavailable — set OPENROUTER_API_KEY to enable."
+            : "Narrator will appear once there are bonus allocations to summarise."}
+        </section>
+      )}
 
       {summary ? (
         <div className="grid gap-4 lg:grid-cols-3">

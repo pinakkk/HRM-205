@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { SentimentChip } from "@/components/feedback/SentimentChip";
 
 export default async function FeedbackPage() {
   const me = await requireUser();
@@ -24,9 +25,7 @@ export default async function FeedbackPage() {
             {received.map((row) => (
               <li key={row.id} className="p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase text-neutral-500">
-                    {row.sentiment ?? "pending"}
-                  </span>
+                  <SentimentChip sentiment={row.sentiment} />
                   <span className="text-xs text-neutral-500">
                     {new Date(row.created_at).toLocaleDateString()}
                   </span>
