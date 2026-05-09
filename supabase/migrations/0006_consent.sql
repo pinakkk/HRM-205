@@ -9,5 +9,6 @@ alter table public.users
   add column if not exists consent_at timestamptz,
   add column if not exists consent_version text;
 
+drop policy if exists users_self_update on public.users;
 create policy users_self_update on public.users
   for update using (id = auth.uid()) with check (id = auth.uid());

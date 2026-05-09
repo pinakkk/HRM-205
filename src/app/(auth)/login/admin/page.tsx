@@ -33,8 +33,8 @@ export default function AdminLoginPage() {
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Restricted access</h1>
             <p className="mt-2 text-sm text-neutral-400">
-              HR &amp; admin sign-in for FairReward AI. Continue with Google or
-              your admin credentials.
+              HR &amp; admin sign-in for FairReward AI. Continue with your
+              company Google account.
             </p>
           </div>
 

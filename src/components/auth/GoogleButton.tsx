@@ -26,10 +26,25 @@ export function GoogleButton({
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     if (redirect) callbackUrl.searchParams.set("redirect", redirect);
-    // Conveys admin intent to the callback route — the trigger insert always
-    // defaults to 'employee' for OAuth, so the callback elevates the role
-    // when 'intent=admin' is present and the profile is freshly created.
-    if (role === "admin") callbackUrl.searchParams.set("intent", "admin");
+
+    if (role === "admin") {
+      // Mint a server-side single-use admin intent token. The callback
+      // verifies + consumes it before promoting the freshly-created profile
+      // to role='admin'. We can't trust client metadata here because Google
+      // strips custom user_metadata.role on first OAuth sign-in.
+      try {
+        const res = await fetch("/api/auth/admin-intent", { method: "POST" });
+        if (!res.ok) throw new Error("Could not start admin sign-in.");
+        const { token } = (await res.json()) as { token?: string };
+        if (!token) throw new Error("Could not start admin sign-in.");
+        callbackUrl.searchParams.set("intent", "admin");
+        callbackUrl.searchParams.set("intent_token", token);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Admin sign-in setup failed");
+        setLoading(false);
+        return;
+      }
+    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

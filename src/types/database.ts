@@ -413,6 +413,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      admin_intent_tokens: {
+        Row: {
+          token: string;
+          created_at: string;
+          consumed_at: string | null;
+          consumed_by: string | null;
+        };
+        Insert: {
+          token?: string;
+          created_at?: string;
+          consumed_at?: string | null;
+          consumed_by?: string | null;
+        };
+        Update: {
+          token?: string;
+          created_at?: string;
+          consumed_at?: string | null;
+          consumed_by?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       points_balance: {

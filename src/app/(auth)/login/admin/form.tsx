@@ -1,61 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/browser";
+import { useSearchParams } from "next/navigation";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 
 export function AdminLoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get("redirect");
   const justSignedUp = params.get("confirm") === "1";
   const errorParam = params.get("error");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const supabase = createClient();
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError || !data?.user) {
-      setError(signInError?.message ?? "Sign in failed");
-      setLoading(false);
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", data.user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      await supabase.auth.signOut();
-      setError("This account is not an admin. Use the employee portal instead.");
-      setLoading(false);
-      return;
-    }
-
-    router.push(redirect ?? "/admin");
-    router.refresh();
-  }
 
   return (
     <div className="space-y-4 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-sm">
       {justSignedUp && (
         <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-          Account created. If email confirmation is enabled in Supabase, check
-          your inbox before signing in.
+          Account created. Continue with Google to sign in.
         </div>
       )}
       {errorParam === "oauth_failed" && (
@@ -63,52 +21,26 @@ export function AdminLoginForm() {
           Google sign-in failed. Please try again.
         </div>
       )}
+      {errorParam === "existing_employee" && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+          This Google account is already registered as an employee. Use the
+          employee portal, or sign in with a different Google account to
+          create a new admin.
+        </div>
+      )}
+      {(errorParam === "admin_intent_invalid" ||
+        errorParam === "admin_intent_missing") && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
+          Admin sign-in link expired or was already used. Please try again.
+        </div>
+      )}
 
       <GoogleButton redirect={redirect} role="admin" variant="dark" />
 
-      <div className="flex items-center gap-3 text-xs uppercase text-neutral-500">
-        <span className="h-px flex-1 bg-neutral-800" />
-        or sign in with admin credentials
-        <span className="h-px flex-1 bg-neutral-800" />
-      </div>
-
-      <form onSubmit={onSubmit} className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-neutral-200">
-            Admin email
-          </label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            placeholder="admin@yourcompany.com"
-            className="mt-1.5 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 placeholder-neutral-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-200">
-            Password
-          </label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            className="mt-1.5 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          />
-        </div>
-        {error && <p className="text-sm text-rose-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-400 disabled:opacity-60"
-        >
-          {loading ? "Verifying…" : "Sign in to admin console"}
-        </button>
-      </form>
+      <p className="text-center text-xs text-neutral-500">
+        Admin sign-in uses Google only. Your account stays tied to your
+        company identity and we never see your password.
+      </p>
     </div>
   );
 }
