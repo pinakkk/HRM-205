@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Supabase OAuth / magic-link callback. Exchanges the `code` for a session
  * and redirects to the role-appropriate landing page.
  *
- * `intent=admin` is set by the GoogleButton on the admin signup page. The
- * `handle_new_user` trigger defaults OAuth users to 'employee' (Google does
- * not pass a role in raw_user_meta_data). When `intent=admin` AND the user's
- * profile row was just created (within 60s), we promote them. Existing
- * users keep their stored role regardless of intent.
+ * Admin OAuth signup flow:
+ *   GoogleButton on /signup/admin and /login/admin appends `intent=admin` to
+ *   the callback URL. The `handle_new_user` trigger always inserts OAuth
+ *   users with role='employee' (Google never sends a role in user metadata).
+ *   When intent=admin AND this is the user's very first sign-in, we use
+ *   the service-role client to promote the row to 'admin' — RLS blocks the
+ *   user's own client from changing their role.
+ *
+ *   Only the first sign-in is eligible for elevation, so an existing
+ *   employee who later clicks "Continue with Google" on the admin page is
+ *   not silently promoted; they are bounced to /employee.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -35,25 +42,49 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  let { data: profile } = await supabase
+  // Use the service-role client to read + (optionally) elevate the role.
+  // The user's own session can read their row but cannot change `role`
+  // (blocked by users_self_update RLS policy).
+  const admin = createAdminClient();
+
+  let { data: profile } = await admin
     .from("users")
-    .select("role, created_at")
+    .select("role")
     .eq("id", user.id)
     .single();
 
-  // Promote to admin only on first OAuth signup via the admin portal.
-  // Existing employees clicking "Continue with Google" on the admin signup
-  // page will not be elevated.
-  if (intent === "admin" && profile?.role === "employee" && profile.created_at) {
-    const isFreshProfile =
-      Date.now() - Date.parse(profile.created_at) < 60 * 1000;
-    if (isFreshProfile) {
-      const { data: updated } = await supabase
+  // Some triggers fire asynchronously; if the profile row is not visible
+  // yet, give the trigger a brief moment then re-read once.
+  if (!profile) {
+    await new Promise((r) => setTimeout(r, 250));
+    const retry = await admin
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    profile = retry.data;
+  }
+
+  if (intent === "admin" && profile?.role === "employee") {
+    // Supabase sets `last_sign_in_at` to equal `created_at` on the very
+    // first sign-in. Any later sign-in advances `last_sign_in_at`. We use
+    // that to detect a brand-new account and gate the role elevation.
+    const createdAt = user.created_at ? Date.parse(user.created_at) : NaN;
+    const lastSignInAt = user.last_sign_in_at
+      ? Date.parse(user.last_sign_in_at)
+      : NaN;
+    const isFirstSignIn =
+      Number.isFinite(createdAt) &&
+      Number.isFinite(lastSignInAt) &&
+      Math.abs(lastSignInAt - createdAt) < 5_000;
+
+    if (isFirstSignIn) {
+      const { data: updated } = await admin
         .from("users")
         .update({ role: "admin" })
         .eq("id", user.id)
         .eq("role", "employee")
-        .select("role, created_at")
+        .select("role")
         .single();
       if (updated) profile = updated;
     }
