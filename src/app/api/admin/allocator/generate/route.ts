@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, problem } from "@/lib/http";
 import { rateLimits } from "@/lib/redis";
 import { proposeAllocation } from "@/lib/llm/allocator";
 import { allocatorInputSchema } from "@/lib/llm/schemas";
+import { computeEmployeeFeatures } from "@/lib/llm/features";
 
 const bodySchema = z.object({
   cycle_id: z.string().uuid(),
@@ -40,8 +42,6 @@ export async function POST(request: Request) {
   if (!cycle) return problem(404, "Cycle not found");
   if (cycle.status !== "draft") return problem(409, "Cycle not in draft");
 
-  // Fetch features for every employee — replace with real signals once
-  // attendance / KPI / feedback aggregates are wired up.
   const { data: employees } = await supabase
     .from("users")
     .select("id, full_name, joined_at")
@@ -49,24 +49,15 @@ export async function POST(request: Request) {
 
   if (!employees?.length) return problem(400, "No employees to allocate to");
 
+  const admin = createAdminClient();
+  const features = await computeEmployeeFeatures(admin, employees);
+
   const input = allocatorInputSchema.parse({
     cycle_label: cycle.label,
     pool_amount: Number(cycle.pool_amount),
-    employees: employees.map((e) => ({
-      user_id: e.id,
-      full_name: e.full_name,
-      attendance_pct: 80, // TODO: compute from attendance table
-      kpi_score: 70, // TODO: compute from kpi_assignments
-      peer_sentiment: 0.2, // TODO: aggregate from feedback
-      tenure_months: monthsSince(e.joined_at),
-    })),
+    employees: features,
   });
 
   const allocation = await proposeAllocation(input);
-  return ok({ cycle, allocation });
-}
-
-function monthsSince(iso: string) {
-  const then = new Date(iso).getTime();
-  return Math.max(0, Math.round((Date.now() - then) / (1000 * 60 * 60 * 24 * 30)));
+  return ok({ cycle, allocation, features });
 }

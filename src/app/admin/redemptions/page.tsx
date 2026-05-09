@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { DecisionButtons } from "./decision-buttons";
 
 export default async function AdminRedemptionsPage() {
   const supabase = await createClient();
@@ -35,16 +36,7 @@ export default async function AdminRedemptionsPage() {
                 <td className="p-3 text-right font-mono">{r.points_spent}</td>
                 <td className="p-3 capitalize">{r.status}</td>
                 <td className="p-3 text-right">
-                  {r.status === "pending" && (
-                    <div className="flex justify-end gap-2">
-                      <button className="rounded border px-2 py-0.5 text-xs hover:bg-neutral-50">
-                        Approve
-                      </button>
-                      <button className="rounded border px-2 py-0.5 text-xs hover:bg-neutral-50">
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  {r.status === "pending" && <DecisionButtons redemptionId={r.id} />}
                 </td>
               </tr>
             )) ?? null}

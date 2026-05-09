@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { formatINR } from "@/lib/utils";
+import { AllocatorWorkflow } from "./workflow";
 
 export default async function AllocatorCyclePage({
   params,
@@ -11,17 +12,23 @@ export default async function AllocatorCyclePage({
   const supabase = await createClient();
   const { data: cycle } = await supabase
     .from("allocation_cycles")
-    .select("*")
+    .select("id, label, pool_amount, status, created_at")
     .eq("id", cycleId)
     .maybeSingle();
 
   if (!cycle) notFound();
 
-  const { data: ledgerRows } = await supabase
-    .from("rewards_ledger")
-    .select("id, user_id, amount, reason, source, rationale_json, created_at")
-    .eq("cycle_id", cycleId)
-    .order("created_at", { ascending: false });
+  const [{ data: ledgerRows }, { data: employees }, { data: profiles }] = await Promise.all([
+    supabase
+      .from("rewards_ledger")
+      .select("id, user_id, amount, reason, source, rationale_json, created_at")
+      .eq("cycle_id", cycleId)
+      .order("created_at", { ascending: false }),
+    supabase.from("users").select("id, full_name").eq("role", "employee"),
+    supabase.from("users").select("id, full_name"),
+  ]);
+
+  const nameById = new Map((profiles ?? []).map((u) => [u.id, u.full_name]));
 
   return (
     <div className="space-y-6">
@@ -33,17 +40,18 @@ export default async function AllocatorCyclePage({
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button className="rounded-md bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-700">
-          Generate suggestions
-        </button>
-        <button className="rounded-md border px-3 py-1 text-sm hover:bg-neutral-50">
-          Publish
-        </button>
-      </div>
+      <AllocatorWorkflow
+        cycle={{
+          id: cycle.id,
+          label: cycle.label,
+          pool_amount: Number(cycle.pool_amount),
+          status: cycle.status,
+        }}
+        employees={employees ?? []}
+      />
 
       <section>
-        <h2 className="mb-2 text-lg font-semibold">Allocations</h2>
+        <h2 className="mb-2 text-lg font-semibold">Published allocations</h2>
         <div className="rounded-md border">
           {ledgerRows?.length ? (
             <table className="w-full text-sm">
@@ -58,7 +66,7 @@ export default async function AllocatorCyclePage({
               <tbody className="divide-y">
                 {ledgerRows.map((r) => (
                   <tr key={r.id}>
-                    <td className="p-3 font-mono text-xs">{r.user_id.slice(0, 8)}…</td>
+                    <td className="p-3">{nameById.get(r.user_id) ?? r.user_id.slice(0, 8) + "…"}</td>
                     <td className="p-3 text-right font-mono">
                       {formatINR(Number(r.amount))}
                     </td>

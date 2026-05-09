@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { NewCycleButton } from "./new-cycle-button";
 
 export default async function AllocatorIndex() {
   const supabase = await createClient();
@@ -12,9 +13,7 @@ export default async function AllocatorIndex() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">AI Bonus Allocator</h1>
-        <button className="rounded-md bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-700">
-          New cycle
-        </button>
+        <NewCycleButton />
       </div>
       <p className="text-sm text-neutral-500">
         Define a pool, generate suggestions, review rationales, and publish to the ledger.
