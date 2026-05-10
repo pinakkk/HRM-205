@@ -4,24 +4,8 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export function TopBar({ profile }: { profile: Profile }) {
   return (
-    <header className="flex items-center justify-between border-b bg-white px-6 py-3 dark:bg-neutral-950">
-      <div className="flex items-center gap-3">
-        <Link href="/" className="font-semibold">
-          FairReward AI
-        </Link>
-        <span className="text-xs text-neutral-500">
-          {profile.role === "admin" ? "HR Admin" : "Employee"}
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-neutral-600 dark:text-neutral-300">{profile.full_name}</span>
-        <ThemeToggle />
-        <form action="/auth/sign-out" method="post">
-          <button className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white">
-            Sign out
-          </button>
-        </form>
-      </div>
+    <header className="sticky top-0 z-50 flex h-[53px] items-center justify-end border-b bg-white/80 px-6 backdrop-blur-md dark:bg-neutral-950/80">
+      {/* TopBar content moved to Sidebar bottom */}
     </header>
   );
 }

@@ -1,41 +1,60 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { CheckInButton } from "./check-in-button";
+import { 
+  AttendanceSummary, 
+  CheckInCard, 
+  AttendanceCalendar, 
+  LeaveRecords 
+} from "./attendance-components";
+import { Bell, Search, Calendar as CalendarIcon } from "lucide-react";
 
 export default async function AttendancePage() {
   const me = await requireUser();
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("attendance")
-    .select("id, check_in, check_out")
-    .eq("user_id", me.profile.id)
-    .order("check_in", { ascending: false })
-    .limit(20);
+  const today = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Attendance</h1>
-      <CheckInButton />
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Recent check-ins</h2>
-        <div className="rounded-md border">
-          {data?.length ? (
-            <ul className="divide-y">
-              {data.map((row) => (
-                <li key={row.id} className="flex items-center justify-between p-3 text-sm">
-                  <span>{new Date(row.check_in).toLocaleString()}</span>
-                  <span className="text-neutral-500">
-                    {row.check_out ? "✓ checked out" : "in progress"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="p-6 text-center text-sm text-neutral-500">No check-ins yet.</div>
-          )}
+    <div className="flex flex-col gap-8 pb-10">
+      {/* Header Section */}
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Attendance Management</h1>
+          <p className="text-sm text-neutral-500">Track your daily presence, leaves, and attendance history ({today})</p>
         </div>
-      </section>
+        <div className="flex items-center gap-3">
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+            <input 
+              type="text" 
+              placeholder="Search history..." 
+              className="h-10 w-64 rounded-full border border-neutral-200 bg-white pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-neutral-900 dark:border-neutral-800"
+            />
+          </div>
+          <button className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400">
+            <Bell className="h-5 w-5" />
+          </button>
+          <button className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400">
+            <CalendarIcon className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Daily Attendance Summary Cards */}
+      <AttendanceSummary />
+
+      {/* Check-in / Check-out Interface */}
+      <CheckInCard />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Monthly Attendance Calendar */}
+        <AttendanceCalendar />
+
+        {/* Leave Records Section */}
+        <LeaveRecords />
+      </div>
     </div>
   );
 }

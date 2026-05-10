@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
+import { Mulish } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { Toaster } from "@/components/ui/Toaster";
 import "./globals.css";
+
+const mulish = Mulish({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900", "1000"],
+});
 
 export const metadata: Metadata = {
   title: "FairReward AI",
@@ -22,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />
       </head>
-      <body>
+      <body className={mulish.className}>
         <ThemeProvider>
           {children}
           <Toaster />
