@@ -1,0 +1,23 @@
+/**
+ * Cloudflare Workers config for the Next.js app via @opennextjs/cloudflare.
+ * Docs: https://opennext.js.org/cloudflare
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fairreward-ai",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Replaces Vercel crons. Cloudflare invokes the Worker's scheduled() handler;
+  // OpenNext routes that to the matching /api/cron/* route based on cron expr.
+  "triggers": {
+    "crons": ["0 9 * * 1", "0 0 1 * *"]
+  }
+}

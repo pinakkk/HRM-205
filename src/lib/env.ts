@@ -11,8 +11,6 @@ const serverSchema = z.object({
   OPENROUTER_ALLOCATOR_MODEL: z.string().default("openai/gpt-5.5"),
   OPENROUTER_NARRATOR_MODEL: z.string().default("openai/gpt-5.4-mini"),
   RESEND_API_KEY: z.string().optional().or(z.literal("")),
-  APP_URL: z.string().url().default("http://localhost:3000"),
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
 export const env = serverSchema.parse({
@@ -26,8 +24,6 @@ export const env = serverSchema.parse({
   OPENROUTER_ALLOCATOR_MODEL: process.env.OPENROUTER_ALLOCATOR_MODEL,
   OPENROUTER_NARRATOR_MODEL: process.env.OPENROUTER_NARRATOR_MODEL,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
-  APP_URL: process.env.APP_URL,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
 });
 
 export type Env = typeof env;

@@ -167,7 +167,7 @@ export default async function RewardsPage() {
                 <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{item.name}</h4>
                 <p className="mt-1 text-[10px] text-neutral-500 line-clamp-2">{item.description}</p>
                 <div className="mt-4 flex items-center justify-between">
-                  <div className="text-xs font-extrabold text-indigo-600">{item.price} pts</div>
+                  <div className="text-xs font-extrabold text-indigo-600">{item.cost_points} pts</div>
                   <button className="rounded-lg bg-white px-3 py-1 text-[10px] font-bold text-neutral-900 shadow-sm border border-neutral-200 hover:bg-neutral-50 transition-colors dark:bg-neutral-900 dark:text-white dark:border-neutral-800">
                     Redeem
                   </button>

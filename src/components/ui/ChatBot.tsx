@@ -26,7 +26,12 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
       timestamp: new Date(),
     },
   ]);
+  const [mounted, setMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -130,7 +135,7 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
                   "text-[10px] mt-1 opacity-70",
                   msg.sender === 'user' ? "text-right" : "text-left"
                 )}>
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {mounted ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </p>
               </div>
             </div>

@@ -59,7 +59,7 @@ export async function chat(
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": env.APP_URL,
+          "HTTP-Referer": "https://fairreward.app",
           "X-Title": "FairReward AI",
         },
         body: JSON.stringify(body),

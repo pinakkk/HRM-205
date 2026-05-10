@@ -28,6 +28,7 @@ import {
   Legend,
   ArcElement,
   Filler,
+  type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie } from 'react-chartjs-2';
 import { cn } from "@/lib/utils";
@@ -118,14 +119,14 @@ export function PerformanceAnalytics() {
     ],
   };
 
-  const options = {
+  const options: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
     },
     scales: {
-      y: { grid: { borderDash: [5, 5] } },
+      y: { border: { dash: [5, 5] } },
       x: { grid: { display: false } },
     },
   };
