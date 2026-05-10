@@ -1,14 +1,14 @@
 import { requireAdmin } from "@/lib/auth";
-import { 
-  CreateBadgeForm, 
-  AssignAchievementForm, 
-  BadgeCriteriaSettings, 
-  BadgeInventory 
+import {
+  CreateBadgeForm,
+  AssignAchievementForm,
+  BadgeCriteriaSettings,
+  BadgeInventory
 } from "./badge-admin-components";
-import { Bell, Award, Search, Sparkles } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 
 export default async function AdminBadgesPage() {
-  const me = await requireAdmin();
+  await requireAdmin();
   const today = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Award, 
-  Plus, 
-  Settings, 
-  Users, 
-  Search, 
-  Edit3, 
+import {
+  Award,
+  Plus,
+  Users,
+  Search,
+  Edit3,
   Trash2,
   ShieldCheck,
   Zap,

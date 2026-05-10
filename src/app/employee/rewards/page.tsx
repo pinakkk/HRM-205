@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { formatPoints } from "@/lib/utils";
+import { formatPoints, cn } from "@/lib/utils";
 import {
   Trophy,
   History,
@@ -189,8 +189,4 @@ export default async function RewardsPage() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }

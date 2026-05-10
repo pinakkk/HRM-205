@@ -34,7 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const me = await requireAdmin();
   return (
     <div className="flex min-h-screen">
-      <AdminLayoutClient items={items} title="HR / Admin" profile={me.profile}>
+      <AdminLayoutClient items={items} profile={me.profile}>
         {children}
       </AdminLayoutClient>
     </div>

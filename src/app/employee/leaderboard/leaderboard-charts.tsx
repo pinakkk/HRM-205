@@ -52,7 +52,7 @@ export function DepartmentChart() {
         ticks: {
           font: {
             size: 12,
-            weight: 'bold' as any,
+            weight: 'bold' as const,
           }
         }
       },

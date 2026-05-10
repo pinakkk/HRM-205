@@ -8,13 +8,11 @@ import type { Profile } from "@/types/domain";
 export type NavItem = { href: string; label: string; icon?: React.ReactNode };
 
 export function Sidebar({
-  title,
   items,
   current,
   profile,
   onClose,
 }: {
-  title: string;
   items: NavItem[];
   current?: string;
   profile?: Profile;

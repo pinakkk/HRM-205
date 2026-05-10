@@ -1,17 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Star, 
-  MessageSquare, 
-  User, 
-  Search, 
-  Filter, 
+import {
+  Star,
+  MessageSquare,
   Send,
   ThumbsUp,
-  ThumbsDown,
   AlertCircle,
-  MoreVertical,
   ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -2,13 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatPoints } from "@/lib/utils";
 import { BonusPerformanceChart } from "./bonus-charts";
-import { 
-  Coins, 
-  History, 
-  TrendingUp, 
-  Gift, 
-  ArrowUpRight, 
-  Target, 
+import {
+  Coins,
+  History,
+  TrendingUp,
+  ArrowUpRight,
+  Target,
   Award,
   Zap
 } from "lucide-react";

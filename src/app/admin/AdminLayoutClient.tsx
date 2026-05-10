@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { Sidebar, NavItem } from "@/components/nav/Sidebar";
-import { TopBar } from "@/components/nav/TopBar";
 import type { Profile } from "@/types/domain";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
@@ -10,14 +9,12 @@ import { cn } from "@/lib/utils";
 
 export default function AdminLayoutClient({
   items,
-  title,
   profile,
-  children
+  children,
 }: {
   items: NavItem[];
-  title: string;
   profile: Profile;
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -48,7 +45,7 @@ export default function AdminLayoutClient({
         "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 h-[100dvh]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <Sidebar title={title} items={items} current={pathname} profile={profile} onClose={() => setIsMobileOpen(false)} />
+        <Sidebar items={items} current={pathname} profile={profile} onClose={() => setIsMobileOpen(false)} />
       </div>
 
       <main className="flex-1 p-4 md:p-8 bg-neutral-50/50 dark:bg-neutral-900/50 overflow-auto">

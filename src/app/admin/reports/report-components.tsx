@@ -1,18 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { 
-  BarChart, 
-  LineChart, 
-  PieChart, 
-  Download, 
-  FileText, 
-  Table, 
+import {
+  Download,
+  FileText,
+  Table,
   Filter,
   Calendar,
   TrendingUp,
   Award,
-  Users,
   Zap,
   ChevronDown
 } from "lucide-react";
@@ -31,7 +26,6 @@ import {
   type ChartOptions,
 } from 'chart.js';
 import { Line, Bar, Pie } from 'react-chartjs-2';
-import { cn } from "@/lib/utils";
 
 // Register ChartJS components
 ChartJS.register(

@@ -1,14 +1,14 @@
 import { requireAdmin } from "@/lib/auth";
-import { 
-  FeedbackStats, 
-  ProvideFeedback, 
-  EmployeeReviewSystem, 
-  ManagerComments 
+import {
+  FeedbackStats,
+  ProvideFeedback,
+  EmployeeReviewSystem,
+  ManagerComments
 } from "./feedback-admin-components";
-import { Bell, Search, Star, Filter } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 
 export default async function AdminFeedbackPage() {
-  const me = await requireAdmin();
+  await requireAdmin();
   const today = new Date().toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'long',
