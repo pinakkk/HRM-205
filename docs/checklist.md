@@ -1,8 +1,8 @@
 # FairReward AI — Audit Checklist
 
-> Audit date: 2026-05-10
-> Compares `docs/blueprint.md` against the current codebase.
-> Scope assumes Vercel-only deploy (no Sentry, no GitHub Actions CI, no Playwright).
+> Audit date: 2026-05-10 (Phase 7 spec-alignment complete).
+> Compares [blueprint.md](blueprint.md) §4 (the production sidebar spec) against the current codebase.
+> Driver doc: [updaterequired.md](updaterequired.md).
 
 ---
 
@@ -11,191 +11,115 @@
 - ✅ Implemented as specified
 - 🟡 Partially implemented / stubbed / needs polish
 - ⛔ Missing
-- ➕ Beyond blueprint (already in code)
+- ➕ Beyond blueprint
 
 ---
 
-## 1. Implemented perfectly
+## 1. Employee sidebar (spec order)
 
-### Project setup
-- ✅ Next.js 15 App Router + TypeScript strict + Tailwind 3
-- ✅ `tsconfig.json` with `@/*` alias
-- ✅ `vercel.json` (Mumbai region + cron config)
-- ✅ `.env.example` template covers Supabase, Upstash, OpenRouter (3 model variants), Resend, app URLs
-- ✅ `src/lib/env.ts` Zod-validated env
-- ✅ All blueprint dependencies declared in `package.json`
+| # | Spec item | Route | Status |
+|---|---|---|---|
+| 1 | Dashboard | [/employee](../src/app/employee/page.tsx) | ✅ live data, level + streak + EOTM banner + announcements |
+| 2 | My Profile | [/employee/profile](../src/app/employee/profile/page.tsx) | ✅ form + level card |
+| 3 | Attendance | [/employee/attendance](../src/app/employee/attendance/page.tsx) | ✅ check-in + QR + history + leaves |
+| 4 | Performance | [/employee/performance](../src/app/employee/performance/page.tsx) | ✅ KPI list + AI suggestions panel |
+| 5 | Rewards & Points | [/employee/rewards](../src/app/employee/rewards/page.tsx) | ✅ links into store |
+| 6 | Badges & Achievements | [/employee/badges](../src/app/employee/badges/page.tsx) | ✅ earned vs locked grid |
+| 7 | Bonuses | [/employee/bonus](../src/app/employee/bonus/page.tsx) | ✅ |
+| 8 | Feedback | [/employee/feedback](../src/app/employee/feedback/page.tsx) | ✅ inbox with sentiment |
+| 9 | Leaderboard | [/employee/leaderboard](../src/app/employee/leaderboard/page.tsx) | ✅ |
+| 10 | Notifications | [/employee/notifications](../src/app/employee/notifications/page.tsx) | ✅ list + bell in sidebar |
+| 11 | Settings | [/employee/settings](../src/app/employee/settings/page.tsx) | ✅ prefs + DPDP consent |
+| 12 | Logout | sidebar footer | ✅ |
 
-### Database (Supabase)
-- ✅ Migration `0001_init.sql` — 13 tables + indexes + `handle_new_user` trigger
-- ✅ Migration `0002_rls.sql` — RLS + `is_admin()` + per-table policies
-- ✅ Migration `0003_views.sql` — `points_balance` MV + `leaderboard` view + refresh RPC
-- ✅ Migration `0004_seed_meta.sql` — badges + catalog seed
-- ✅ Migration `0005_oauth_metadata.sql` — Google OAuth mapping
-- ✅ Migration `0006_consent.sql` — DPDP consent fields (➕ beyond blueprint)
-- ✅ `supabase/functions/on-feedback-insert/index.ts` — sentiment edge function (code complete)
-- ✅ `scripts/seed.ts` — 1 admin + 5 demo employees
+## 2. HR / Admin sidebar (spec order)
 
-### Auth & guards
-- ✅ Supabase client trio: [server.ts](src/lib/supabase/server.ts), [browser.ts](src/lib/supabase/browser.ts), [admin.ts](src/lib/supabase/admin.ts), [middleware.ts](src/lib/supabase/middleware.ts)
-- ✅ `/login`, `/signup`, `/auth/callback`, `/auth/sign-out`
-- ✅ Role-based middleware redirect
-- ✅ `requireUser()` / `requireAdmin()` server guards
+| # | Spec item | Route | Status |
+|---|---|---|---|
+| 1 | Dashboard | [/admin](../src/app/admin/page.tsx) | ✅ live stats + EOTM + announcements |
+| 2 | Employee Management | [/admin/users](../src/app/admin/users/page.tsx) | ✅ |
+| 3 | Attendance Management | [/admin/attendance](../src/app/admin/attendance/page.tsx) | ✅ leave queue + QR poster |
+| 4 | Performance Management | [/admin/kpis](../src/app/admin/kpis/page.tsx) | ✅ |
+| 5 | Reward Management | [/admin/rewards](../src/app/admin/rewards/page.tsx) | ✅ hub + manual award form |
+| 6 | Bonus Management | [/admin/allocator](../src/app/admin/allocator/page.tsx) | ✅ |
+| 7 | Badge Management | [/admin/badges](../src/app/admin/badges/page.tsx) | ✅ |
+| 8 | Feedback & Reviews | [/admin/feedback](../src/app/admin/feedback/page.tsx) | ✅ |
+| 9 | Leaderboard Control | [/admin/leaderboard](../src/app/admin/leaderboard/page.tsx) | ✅ live + EOTM selector |
+| 10 | Reports & Analytics | [/admin/reports](../src/app/admin/reports/page.tsx) | ✅ |
+| 11 | Announcements | [/admin/announcements](../src/app/admin/announcements/page.tsx) | ✅ composer + fan-out |
+| 12 | Settings | [/admin/settings](../src/app/admin/settings/page.tsx) | ✅ rules + AI config + system info |
+| 13 | Logout | sidebar footer | ✅ |
 
-### Employee surface
-- ✅ [Dashboard](src/app/employee/page.tsx) — balance cards + recent ledger
-- ✅ [Attendance](src/app/employee/attendance/page.tsx) — check-in button + history
-- ✅ [KPIs](src/app/employee/kpis/page.tsx) — assignments with progress
-- ✅ [Feedback inbox](src/app/employee/feedback/page.tsx) — sentiment chips
-- ✅ [Leaderboard](src/app/employee/leaderboard/page.tsx) — top 50
-- ✅ [Store](src/app/employee/store/page.tsx) — catalog grid
-- ✅ [Consent](src/app/employee/consent/page.tsx) — DPDP opt-in (➕ beyond blueprint)
-- ✅ Realtime wallet hook ([useRealtimeWallet.ts](src/hooks/useRealtimeWallet.ts))
+## 3. Optional advanced features
 
-### Admin surface
-- ✅ [Overview](src/app/admin/page.tsx) — stat cards
-- ✅ [Users](src/app/admin/users/page.tsx) — directory table
-- ✅ [KPIs](src/app/admin/kpis/page.tsx) — KPI table
-- ✅ [Allocator index](src/app/admin/allocator/page.tsx) + [cycle workflow](src/app/admin/allocator/[cycleId]/workflow.tsx) — Generate → edit → Publish
-- ✅ [Bias audit](src/app/admin/audit/page.tsx) — DIR + ANOVA + manager skew + LLM narration + findings history
-- ✅ [Redemptions](src/app/admin/redemptions/page.tsx) — approve/reject queue
-- ✅ [Catalog](src/app/admin/catalog/page.tsx) — items table
+| ID | Feature | Status |
+|---|---|---|
+| O-01 | Employee of the Month | ✅ table + admin selector + employee/admin dashboard cards + winner notification |
+| O-02 | Reward Store | ✅ catalog + redemption queue, linked from `/employee/rewards` and `/admin/rewards` |
+| O-03 | QR Attendance | ✅ HMAC-signed token (5-min rotation) — admin poster, employee paste-token form |
+| O-04 | Real-Time Notifications | 🟡 in-app feed + bell + 30s polling. Realtime upgrade is a one-line swap to Supabase `postgres_changes`. |
+| O-05 | AI Performance Suggestions | ✅ `/api/me/suggestions` — LLM (OpenRouter) when key set, deterministic fallback otherwise |
+| O-06 | Gamification Levels | ✅ `lib/gamification.ts` — Beginner / Performer / Achiever / Expert / Champion shown on dashboard + profile |
+| O-07 | Daily Streaks | ✅ `lib/streaks.ts` — surfaced on dashboard + attendance page |
 
-### API routes (all wired with Zod + rate-limit + cache where required)
-- ✅ `GET /api/me`
-- ✅ `POST /api/me/consent` (➕ beyond blueprint)
-- ✅ `POST /api/attendance/check-in` — rate-limited, idempotent per day
-- ✅ `POST /api/feedback` — rate-limited, sentiment via `after()`
-- ✅ `GET /api/leaderboard` — Redis-cached 60s
-- ✅ `POST /api/redemptions` — checks balance + stock
-- ✅ `POST /api/admin/rewards` — manual award
-- ✅ `POST /api/admin/allocator/cycles` — create draft
-- ✅ `POST /api/admin/allocator/generate` — features → LLM → proposal
-- ✅ `POST /api/admin/allocator/publish` — idempotent ledger insert + audit + MV refresh + cache invalidate
-- ✅ `POST /api/admin/redemptions/[id]/decide` — offsetting ledger row + stock decrement
-- ✅ `GET /api/admin/audit/fairness` — DIR + ANOVA + manager skew (cached 1h)
-- ✅ `POST /api/admin/users/import` — CSV bulk import
-- ✅ `GET /api/admin/export/csv` — ledger / users / redemptions
-- ✅ `GET /api/cron/weekly-digest` — Resend digest
-- ✅ `GET /api/cron/audit-refresh` — invalidate cache + persist `audit_findings`
+## 4. Database
 
-### LLM layer
-- ✅ [client.ts](src/lib/llm/client.ts) — OpenRouter wrapper with retry + JSON-mode
-- ✅ [prompts.ts](src/lib/llm/prompts.ts) — sentiment / allocator / narrator prompts
-- ✅ [schemas.ts](src/lib/llm/schemas.ts) — Zod schemas for all three layers
-- ✅ [allocator.ts](src/lib/llm/allocator.ts) — clamp 25%, scrub forbidden tokens, scale to pool, KPI-weighted `equalSplit()` fallback
-- ✅ [sentiment.ts](src/lib/llm/sentiment.ts) — L1 classifier
-- ✅ [narrator.ts](src/lib/llm/narrator.ts) — L3 plain-English bias narrator
-- ✅ [features.ts](src/lib/llm/features.ts) — attendance / KPI / sentiment / tenure aggregator (90-day window)
+- ✅ Migrations 0001 – 0007 (existing) + **0008_phase2_features.sql** (new tables + RLS).
+- ✅ [src/types/database.ts](../src/types/database.ts) updated to include all 5 new tables and the 3 new `users` columns.
+- ✅ Indexes: notifications by user/read, leaves by status, announcements by published_at.
+- 🟡 Hand-rolled types — replace with `npm run db:types` once Supabase project is provisioned.
 
-### Audit / fairness layer
-- ✅ [disparate-impact.ts](src/lib/audit/disparate-impact.ts) — DIR, pairwise DIR, ANOVA F-test, manager skew (deterministic)
-- ✅ [anomalies.ts](src/lib/audit/anomalies.ts) — attendance jump + feedback skew flags
-- ✅ `audit_findings` persistence via cron
+## 5. AI layer
 
-### Caching & rate limiting
-- ✅ [redis.ts](src/lib/redis.ts) — Upstash client + `@upstash/ratelimit` factories (login, kudos, allocator, feedback, check-in)
-- ✅ Cache helpers + key conventions
-- ✅ Graceful no-op when Redis env missing (dev mode)
+- ✅ L1 sentiment — unchanged.
+- ✅ L1.5 per-employee suggestions (➕ new) — `/api/me/suggestions` with deterministic fallback.
+- ✅ L2 allocator — unchanged.
+- ✅ L3 narrator — unchanged.
 
-### UI primitives & nav
-- ✅ [Sidebar.tsx](src/components/nav/Sidebar.tsx) + [TopBar.tsx](src/components/nav/TopBar.tsx)
-- ✅ [ThemeProvider](src/components/theme/ThemeProvider.tsx) + [ThemeToggle](src/components/theme/ThemeToggle.tsx) — class-based dark mode + no-flash boot script
-- ✅ [Toaster.tsx](src/components/ui/Toaster.tsx) — globally mounted, `toasts.success/error/info`
-- ✅ [EmptyState.tsx](src/components/ui/EmptyState.tsx)
-- ✅ [Skeleton.tsx](src/components/ui/Skeleton.tsx)
-- ✅ [SentimentChip.tsx](src/components/feedback/SentimentChip.tsx)
-- ✅ [GoogleButton.tsx](src/components/auth/GoogleButton.tsx)
+## 6. Tests
 
-### Hooks / stores / types
-- ✅ [useUser.ts](src/hooks/useUser.ts), [useRealtimeWallet.ts](src/hooks/useRealtimeWallet.ts)
-- ✅ [stores/ui.ts](src/stores/ui.ts) — Zustand UI state
-- ✅ [types/domain.ts](src/types/domain.ts) — domain types
+- ✅ Existing 17 tests still passing.
+- ✅ + [gamification.test.ts](../tests/unit/gamification.test.ts) (5 cases)
+- ✅ + [streaks.test.ts](../tests/unit/streaks.test.ts) (4 cases)
+- ✅ + [qr-token.test.ts](../tests/unit/qr-token.test.ts) (3 cases)
+- ✅ pgTAP RLS suite unchanged.
 
-### Tests
-- ✅ [vitest.config.ts](vitest.config.ts)
-- ✅ [tests/unit/disparate-impact.test.ts](tests/unit/disparate-impact.test.ts)
-- ✅ [tests/unit/allocator.test.ts](tests/unit/allocator.test.ts)
-- ✅ [tests/unit/anomalies.test.ts](tests/unit/anomalies.test.ts)
-- ✅ pgTAP RLS suite at [supabase/tests/rls.test.sql](supabase/tests/rls.test.sql)
+**Total: 29 unit tests, all green. `npm run typecheck` clean. `npm run build` succeeds.**
+
+## 7. Removed (no backwards-compat shims)
+
+- ⛔ `/employee/consent` page + form — folded into `/employee/settings` (the `/api/me/consent` route stays).
+- ⛔ `/employee/kpis` route — renamed to `/employee/performance`.
+- ⛔ Mock components: `attendance-components.tsx`, `attendance-admin-components.tsx`, `leaderboard-admin-components.tsx`, `DashboardCharts.tsx`, `AdminCharts.tsx`. Replaced by live-data pages.
+- Standalone "Privacy" sidebar entry (folded into Settings).
+- "Coming soon — Phase 5" stub on admin Settings (built out).
+- Hardcoded mock data on admin dashboard (live aggregates now).
+
+## 8. Outstanding — operational only
+
+- Production deploy (Vercel + Supabase + Upstash + OpenRouter + Resend env vars; `QR_ATTENDANCE_SECRET` recommended).
+- Edge function deploy for production-grade sentiment.
+- Optional: swap notification poller → Realtime subscription.
+- Optional: nightly cron evaluating `reward_rules` (e.g. 30-day streak → award badge + points). Helper functions and the rules table are ready.
 
 ---
 
-## 2. Partial / needs work
-
-- 🟡 **Admin Settings** ([page.tsx](src/app/admin/settings/page.tsx)) — placeholder only. Wire point values, badge rules, AI guardrails toggles.
-- 🟡 **CSV import UI** — `/api/admin/users/import` works, but the "Import CSV" button on [admin/users](src/app/admin/users/page.tsx) is not wired to a file picker / form.
-- 🟡 **"New KPI" / "New catalog item" buttons** — UI exists but no create form / handler.
-- 🟡 **Manual reward UI** — `/api/admin/rewards` exists, but there's no admin form to award points/bonus/badge with reason. Currently API-only.
-- 🟡 **Peer kudos UI** — feedback POST supports it server-side, but there is no employee-facing kudos form (`/employee/feedback` is read-only inbox).
-- 🟡 **Redemption decline UX** — points are not debited at request time, so reject is a no-op refund-wise. Surface this in the store before pilot.
-- 🟡 **`src/types/database.ts`** — hand-rolled. Replace with `npm run db:types` output once Supabase project is provisioned.
-- 🟡 **Notifications feature (E-10)** — realtime wallet works, but no in-app notification feed or toast on reward landing.
-- 🟡 **Badge unlock flow** — `user_badges` table exists, but no automated unlock rule engine reading `badges.rule_json`. Badges only land via manual admin award.
-- 🟡 **Leaderboard scoping** — `?scope=dept&period=month` accepted, but only one variant rendered in UI. Add scope/period toggles per blueprint 4.1 E-06.
-- 🟡 **Allocator features quality** — assumes 22 working days/month + 90-day window; tune once production attendance data exists.
-
----
-
-## 3. Missing
-
-- ⛔ **Custom UI primitive set** — only `Toaster`, `EmptyState`, `Skeleton` exist. Need an in-repo set of accessible primitives (Button, Card, Dialog, Input, Select, Table, Tabs) — built ourselves, not shadcn.
-- ⛔ **Tremor / Recharts charts** — Recharts is in `package.json` but no chart components exist. Blueprint section 13 lists `components/charts/{PointsTrend,DistributionByGender,FairnessGauge}.tsx`.
-- ⛔ **Confetti on badge unlock** — no animation logic.
-- ⛔ **Geofence on attendance check-in** — blueprint E-02 mentions optional geofence; not implemented.
-- ⛔ **KPI self-update with evidence URL** — KPI assignments page is read-only; `kpi_assignments.evidence_url` column unused.
-- ⛔ **Streak tracking** — blueprint E-02 mentions streaks; nothing computes consecutive check-in days.
-- ⛔ **Vercel Analytics** — package not installed / not wired (`@vercel/analytics`).
-- ⛔ **OpenRouter spend cap reminder in README** — operational step not documented.
-
-### Removed from scope (per request, 2026-05-10)
-
-- ⛔ Sentry — removed.
-- ⛔ GitHub Actions CI — removed (run `npm test` + `supabase test db` locally before deploy).
-- ⛔ Playwright E2E — removed (rely on Vitest unit tests + manual smoke).
-
----
-
-## 4. Suggestions
-
-### High priority before pilot
-1. **Wire the manual-reward admin form.** The API is ready; a small form on `/admin/users/[id]` (or a modal on the users table) to award points + reason completes the manual lifecycle and unblocks demos without needing the LLM.
-2. **Wire the peer-kudos employee form.** Add a "Send kudos" composer on `/employee/feedback` (or a dedicated `/employee/kudos`). The `/api/feedback` route already accepts it; without a UI the rate-limit / sentiment pipeline goes untested by employees.
-3. **Generate real `database.ts`.** Provision Supabase, run `npm run db:types`, and replace the hand-rolled file. Drift here will silently break queries.
-4. **Settings page MVP.** Even read-only settings (current point values, allocator caps, model in use) gives admins confidence and unblocks observability without code changes.
-5. **Vercel Analytics.** One-line addition: `npm i @vercel/analytics` then `<Analytics />` in `app/layout.tsx`. Replaces the removed Sentry slot for basic perf/usage telemetry.
-
-### Medium priority polish
-6. **Build custom UI primitives in `components/ui/`.** Roll our own Button, Card, Dialog, Input, Select, Table, Tabs (no shadcn — keep the bundle small and the theming under our control). Model the API on Radix/Headless UI conventions but write the markup ourselves. Replace bare Tailwind incrementally — the allocator workflow drawer is the highest-leverage candidate.
-7. **One Recharts chart on the bias audit page.** A grouped bar chart of mean reward by gender / department would visualise the DIR numbers and replace the text-only stat cards.
-8. **Streak + geofence (deferred).** Document explicitly as v2 scope so it's not a surprise gap during demo.
-9. **Badge rule engine.** Even a single declarative rule type (e.g. `{ kind: "attendance_streak", days: 30 }`) evaluated nightly would unlock the badges feature without changing the schema.
-10. **Notifications drawer.** A Realtime-fed "recent rewards" panel in the TopBar makes the live-update story tangible.
-
-### Operational
-11. **Pre-deploy script.** Add `npm run preflight` that runs `tsc --noEmit && npm test` so you have a single command to gate Vercel pushes — replaces the removed GH Actions in spirit.
-12. **OpenRouter spend cap.** Set a hard cap in the OpenRouter dashboard before exposing publish to a real cycle; document the cap in README + checkpoint.
-13. **Edge function deploy.** `supabase functions deploy on-feedback-insert` + register the database webhook for production-grade sentiment. The in-process `after()` covers dev / demo only.
-14. **README operational section.** Add a "Going to production" subsection with the env var checklist + cron verification + edge function deploy steps.
-
----
-
-## 5. Quick health summary
+## 9. Quick health summary
 
 | Area | State |
 |---|---|
-| Schema / RLS | ✅ Production-ready |
+| Schema / RLS | ✅ Production-ready (8 migrations) |
 | Auth | ✅ Production-ready |
-| Employee read paths | ✅ Production-ready |
-| Employee write paths | 🟡 Kudos form missing |
-| Admin read paths | ✅ Production-ready |
-| Admin write paths | 🟡 Manual reward / KPI / catalog forms missing |
-| Allocator (AI L2) | ✅ Production-ready |
-| Sentiment (AI L1) | ✅ Code-complete; edge function needs deploy |
-| Narrator (AI L3) | ✅ Production-ready |
-| Audit / bias | ✅ Production-ready |
-| Caching / rate-limit | ✅ Production-ready |
-| Tests | ✅ 17 unit + pgTAP green |
-| Observability | ⛔ Need to add `@vercel/analytics` |
-| UI polish | 🟡 Bare Tailwind; custom primitive set pending |
+| Employee read paths | ✅ Production-ready (all 11 sidebar routes) |
+| Employee write paths | ✅ Production-ready (kudos, leaves, profile, prefs, consent, QR check-in, redemptions) |
+| Admin read paths | ✅ Production-ready (all 13 sidebar routes) |
+| Admin write paths | ✅ Production-ready (manual award, EOTM, announcements, leave decisions, allocator, redemption decisions) |
+| AI layers | ✅ L1+L1.5+L2+L3 live, all with fallbacks |
+| Notifications | ✅ in-app feed + bell (poll-based; Realtime upgrade is one swap) |
+| Gamification / streaks / EOTM | ✅ live |
+| QR attendance | ✅ token + verify + UI |
+| Caching / rate-limit | ✅ unchanged |
+| Tests | ✅ 29 unit + pgTAP green |
+| Build | ✅ `npm run build` succeeds |
 
-**Overall:** the data + API + AI layers are essentially complete. The remaining work is mostly **admin/employee form UIs** (5–6 small client components) and **UI polish** (custom primitive set + one chart). A focused 1–2 day push closes section 2 and most of section 4.
+**Overall:** the app is **spec-complete** for the production sidebar plus all 7 optional advanced features. Demo-ready out of the box via `npm run seed`.

@@ -20,6 +20,10 @@ type CycleStatus = "draft" | "published" | "closed";
 type LedgerKind = "points" | "bonus" | "badge" | "kudos";
 type LedgerSource = "manual" | "ai_suggested" | "auto_rule" | "peer";
 type RedemptionStatus = "pending" | "approved" | "rejected" | "fulfilled";
+type NotificationType = "reward" | "bonus" | "feedback" | "badge" | "announcement" | "system";
+type Audience = "all" | "engineering" | "sales" | "marketing" | "hr" | "finance";
+type LeaveType = "casual" | "sick" | "earned" | "unpaid";
+type LeaveStatus = "pending" | "approved" | "rejected";
 
 export type Database = {
   // Required by @supabase/ssr's generic constraints. Keep this in sync with
@@ -42,6 +46,9 @@ export type Database = {
           created_at: string;
           consent_at: string | null;
           consent_version: string | null;
+          phone: string | null;
+          bio: string | null;
+          notification_prefs: Json;
         };
         Insert: {
           id: string;
@@ -55,6 +62,9 @@ export type Database = {
           created_at?: string;
           consent_at?: string | null;
           consent_version?: string | null;
+          phone?: string | null;
+          bio?: string | null;
+          notification_prefs?: Json;
         };
         Update: {
           id?: string;
@@ -68,6 +78,9 @@ export type Database = {
           created_at?: string;
           consent_at?: string | null;
           consent_version?: string | null;
+          phone?: string | null;
+          bio?: string | null;
+          notification_prefs?: Json;
         };
         Relationships: [];
       };
@@ -410,6 +423,168 @@ export type Database = {
           flagged?: boolean | null;
           details?: Json | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: number;
+          user_id: string;
+          type: NotificationType;
+          title: string;
+          body: string | null;
+          link: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          type: NotificationType;
+          title: string;
+          body?: string | null;
+          link?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          type?: NotificationType;
+          title?: string;
+          body?: string | null;
+          link?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      announcements: {
+        Row: {
+          id: string;
+          author_id: string;
+          title: string;
+          body: string;
+          audience: Audience;
+          pinned: boolean;
+          published_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          title: string;
+          body: string;
+          audience?: Audience;
+          pinned?: boolean;
+          published_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          title?: string;
+          body?: string;
+          audience?: Audience;
+          pinned?: boolean;
+          published_at?: string;
+        };
+        Relationships: [];
+      };
+      leaves: {
+        Row: {
+          id: number;
+          user_id: string;
+          start_date: string;
+          end_date: string;
+          type: LeaveType;
+          reason: string | null;
+          status: LeaveStatus;
+          approver_id: string | null;
+          decided_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          start_date: string;
+          end_date: string;
+          type: LeaveType;
+          reason?: string | null;
+          status?: LeaveStatus;
+          approver_id?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          start_date?: string;
+          end_date?: string;
+          type?: LeaveType;
+          reason?: string | null;
+          status?: LeaveStatus;
+          approver_id?: string | null;
+          decided_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      reward_rules: {
+        Row: {
+          id: string;
+          name: string;
+          trigger: string;
+          points: number;
+          active: boolean;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          trigger: string;
+          points: number;
+          active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          trigger?: string;
+          points?: number;
+          active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      employee_of_month: {
+        Row: {
+          year: number;
+          month: number;
+          user_id: string;
+          score: number | null;
+          reason: string | null;
+          selected_by: string | null;
+          selected_at: string;
+        };
+        Insert: {
+          year: number;
+          month: number;
+          user_id: string;
+          score?: number | null;
+          reason?: string | null;
+          selected_by?: string | null;
+          selected_at?: string;
+        };
+        Update: {
+          year?: number;
+          month?: number;
+          user_id?: string;
+          score?: number | null;
+          reason?: string | null;
+          selected_by?: string | null;
+          selected_at?: string;
         };
         Relationships: [];
       };

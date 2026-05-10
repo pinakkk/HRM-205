@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ok, problem } from "@/lib/http";
 import { cacheInvalidate, cacheKeys } from "@/lib/redis";
+import { notify } from "@/lib/notifications";
 
 const bodySchema = z.object({
   user_id: z.string().uuid(),
@@ -41,5 +42,17 @@ export async function POST(request: Request) {
     cacheKeys.wallet(parsed.data.user_id),
     cacheKeys.leaderboard("company", "all"),
   );
+
+  await notify({
+    user_id: parsed.data.user_id,
+    type: parsed.data.kind === "bonus" ? "bonus" : "reward",
+    title:
+      parsed.data.kind === "bonus"
+        ? `You received a ₹${parsed.data.amount} bonus`
+        : `You earned ${parsed.data.amount} ${parsed.data.kind}`,
+    body: parsed.data.reason,
+    link: parsed.data.kind === "bonus" ? "/employee/bonus" : "/employee/rewards",
+  });
+
   return ok({ status: "ok" });
 }

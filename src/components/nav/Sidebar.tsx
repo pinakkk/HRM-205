@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { Profile } from "@/types/domain";
 
 export type NavItem = { href: string; label: string; icon?: React.ReactNode };
@@ -61,7 +62,10 @@ export function Sidebar({
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{profile.role}</span>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              {profile.role === "employee" && <NotificationBell />}
+              <ThemeToggle />
+            </div>
           </div>
         )}
 

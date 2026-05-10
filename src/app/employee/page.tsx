@@ -1,218 +1,224 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatPoints } from "@/lib/utils";
-import { KPIChart, AttendanceChart } from "@/components/employee/DashboardCharts";
+import { levelFromPoints, progressToNext } from "@/lib/gamification";
+import { currentStreak, attendancePercent } from "@/lib/streaks";
 import {
-  Users,
-  Clock,
+  BadgeDollarSign,
   Briefcase,
-  MoreHorizontal,
-  Plus,
-  CheckCircle2,
+  Clock,
+  Crown,
+  Flame,
+  Megaphone,
+  Sparkles,
+  Trophy,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function EmployeeDashboard() {
   const me = await requireUser();
   const supabase = await createClient();
 
-  const { data: balance } = await supabase
-    .from("points_balance")
-    .select("balance, bonus_total, lifetime_total")
-    .eq("user_id", me.profile.id)
-    .maybeSingle();
+  const since60 = new Date(Date.now() - 60 * 86400_000).toISOString();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
 
-  const { data: recent } = await supabase
-    .from("rewards_ledger")
-    .select("id, kind, amount, reason, created_at")
-    .eq("user_id", me.profile.id)
-    .order("created_at", { ascending: false })
-    .limit(4);
+  const [{ data: balance }, { data: recent }, { data: att }, { data: ann }, { data: eotm }] =
+    await Promise.all([
+      supabase
+        .from("points_balance")
+        .select("balance, bonus_total, lifetime_total")
+        .eq("user_id", me.profile.id)
+        .maybeSingle(),
+      supabase
+        .from("rewards_ledger")
+        .select("id, kind, amount, reason, created_at")
+        .eq("user_id", me.profile.id)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("attendance")
+        .select("check_in")
+        .eq("user_id", me.profile.id)
+        .gte("check_in", since60),
+      supabase
+        .from("announcements")
+        .select("id, title, body, published_at")
+        .order("pinned", { ascending: false })
+        .order("published_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("employee_of_month")
+        .select("user_id, reason")
+        .eq("year", year)
+        .eq("month", month)
+        .maybeSingle(),
+    ]);
 
-  const today = new Date().toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
+  const checkIns = (att ?? []).map((a) => a.check_in);
+  const streak = currentStreak(checkIns);
+  const pct = attendancePercent(checkIns, 30);
+  const lifetime = Number(balance?.lifetime_total ?? 0);
+  const level = levelFromPoints(lifetime);
+  const progress = Math.round(progressToNext(lifetime) * 100);
+  const isEotm = eotm?.user_id === me.profile.id;
+
+  const eotmName = eotm
+    ? (await supabase.from("users").select("full_name").eq("id", eotm.user_id).single()).data?.full_name ?? null
+    : null;
 
   return (
     <div className="flex flex-col gap-8 pb-10">
-      {/* Header Section (Minimal since TopBar is present) */}
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Good Morning, {me.profile.full_name.split(" ")[0]}</h1>
-        <p className="text-sm text-neutral-500">Start your day with a quick overview of your progress ({today})</p>
+        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
+          Welcome back, {me.profile.full_name.split(" ")[0]}
+        </h1>
+        <p className="text-sm text-neutral-500">Here's your day at a glance.</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <StatCard
+      {isEotm && (
+        <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5 text-amber-900 shadow-sm dark:border-amber-900/40 dark:from-amber-900/20 dark:to-yellow-900/20 dark:text-amber-100">
+          <div className="flex items-center gap-3">
+            <Crown className="h-7 w-7 text-amber-500" />
+            <div>
+              <div className="font-extrabold">You're Employee of the Month!</div>
+              <div className="text-xs">{eotm?.reason ?? "Recognised by HR for outstanding contribution."}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Stat
           label="Points balance"
-          value={formatPoints(balance?.balance ?? 0)}
-          icon={<Users className="h-5 w-5" />}
-          trend="+ 05% from last month"
-          trendColor="text-green-600"
+          value={formatPoints(Number(balance?.balance ?? 0))}
+          icon={<BadgeDollarSign className="h-5 w-5" />}
         />
-        <StatCard
-          label="Bonus this year"
-          value={`₹${formatPoints(balance?.bonus_total ?? 0)}`}
+        <Stat
+          label="Bonus YTD"
+          value={`₹${formatPoints(Number(balance?.bonus_total ?? 0))}`}
           icon={<Briefcase className="h-5 w-5" />}
-          trend="+ 03% from last month"
-          trendColor="text-green-600"
         />
-        <StatCard
-          label="Lifetime points"
-          value={formatPoints(balance?.lifetime_total ?? 0)}
-          icon={<Clock className="h-5 w-5" />}
-          trend="+ 02% from last month"
-          trendColor="text-green-600"
-        />
+        <Stat label="Attendance (30d)" value={`${pct}%`} icon={<Clock className="h-5 w-5" />} />
+        <Stat label="Streak" value={`${streak} days`} icon={<Flame className="h-5 w-5" />} accent="amber" />
       </div>
 
-      {/* Charts Section */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 lg:col-span-2 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
-              KPI Metrics
-            </h3>
-            <select className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium focus:outline-none dark:bg-neutral-800 dark:border-neutral-700">
-              <option>Last 6 months</option>
-            </select>
+        <div className="lg:col-span-1 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 dark:border-indigo-900/40 dark:from-indigo-900/20 dark:to-neutral-900">
+          <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+            <Sparkles className="h-5 w-5" />
+            <h3 className="font-bold">Your level</h3>
           </div>
-          <div className="h-[300px] w-full">
-            <KPIChart />
+          <div className="mt-3 text-3xl font-extrabold text-indigo-700 dark:text-indigo-200">{level.tier}</div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/60 dark:bg-indigo-950/60">
+            <div className="h-full bg-indigo-600" style={{ width: `${progress}%` }} />
           </div>
-        </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
-              Attendance Summary
-            </h3>
-            <select className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium focus:outline-none dark:bg-neutral-800 dark:border-neutral-700">
-              <option>Today</option>
-            </select>
-          </div>
-          <div className="h-[300px] w-full">
-            <AttendanceChart />
+          <div className="mt-2 text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+            {level.next ? `${level.next - lifetime} pts to next tier` : "Top tier — keep going to stay there"}
           </div>
         </div>
-      </div>
 
-      {/* Bottom Section */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Things To Do */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 lg:col-span-2 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="mb-6 flex items-center justify-between">
-            <h3 className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
-              <CheckCircle2 className="h-5 w-5 text-neutral-400" /> Things To Do
-            </h3>
-            <button className="flex items-center gap-1 rounded-md border border-neutral-200 px-3 py-1.5 text-xs font-bold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800">
-              <Plus className="h-3 w-3" /> New task
-            </button>
+        <div className="lg:col-span-2 rounded-xl border border-neutral-200 bg-white dark:bg-neutral-900 dark:border-neutral-800">
+          <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
+            <h3 className="font-bold text-neutral-900 dark:text-white">Recent rewards</h3>
+            <Link href="/employee/rewards" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700">View all</Link>
           </div>
-          <div className="space-y-4">
-            {recent?.length ? (
-              recent.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg border border-neutral-100 p-4 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
-                  <div className="flex items-center gap-4">
-                    <input type="checkbox" className="h-5 w-5 rounded border-neutral-300 text-indigo-600 dark:border-neutral-700 dark:bg-neutral-800" />
-                    <div>
-                      <h4 className="text-sm font-semibold text-neutral-900 capitalize dark:text-white">{r.reason}</h4>
-                      <p className="text-xs text-neutral-500">Reward type: {r.kind}</p>
+          {recent && recent.length > 0 ? (
+            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {recent.map((r) => (
+                <li key={r.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-neutral-900 dark:text-white truncate capitalize">{r.reason}</div>
+                    <div className="text-[11px] text-neutral-500">
+                      {r.kind} · {new Date(r.created_at).toLocaleDateString()}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs font-bold text-neutral-900 dark:text-white">Today</div>
-                    <div className="text-xs font-medium text-neutral-500">+{r.amount} pts</div>
+                  <div className={`text-sm font-bold ${Number(r.amount) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {Number(r.amount) >= 0 ? "+" : ""}
+                    {r.amount}
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="py-10 text-center text-sm text-neutral-500">No tasks or recent activities found.</p>
-            )}
-          </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-12 text-center text-sm text-neutral-500">No rewards yet — your first one is coming.</p>
+          )}
         </div>
+      </div>
 
-        {/* Who's Away */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="mb-6 flex items-center justify-between">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-neutral-200 bg-white dark:bg-neutral-900 dark:border-neutral-800">
+          <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
             <h3 className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white">
-              <Users className="h-5 w-5 text-neutral-400" /> Who&apos;s Away
+              <Megaphone className="h-4 w-4 text-amber-500" /> Announcements
             </h3>
-            <button className="text-neutral-400 hover:text-neutral-600">
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
           </div>
-          <p className="mb-4 text-xs font-bold text-neutral-500">4 Employees <span className="font-normal">Updated 8:15 / 21 May 2025</span></p>
-          <div className="space-y-4">
-            <AwayEmployee name="Abigail Noto" date="21 - 26 May 2025" status="On Leave" />
-            <AwayEmployee name="Gina Kinaya" date="21 May 2025" status="On Leave" />
-            <AwayEmployee name="Jeje" date="21 May 2025" status="On Leave" />
+          {ann && ann.length > 0 ? (
+            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {ann.map((a) => (
+                <li key={a.id} className="px-5 py-3">
+                  <div className="font-semibold text-neutral-900 dark:text-white">{a.title}</div>
+                  <p className="mt-0.5 text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">{a.body}</p>
+                  <div className="mt-1 text-[10px] text-neutral-500">{new Date(a.published_at).toLocaleString()}</div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="px-5 py-10 text-center text-sm text-neutral-500">No announcements yet.</p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:bg-neutral-900 dark:border-neutral-800">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            <h3 className="font-bold text-neutral-900 dark:text-white">Employee of the Month</h3>
           </div>
+          {eotmName ? (
+            <div className="mt-3">
+              <div className="text-xl font-extrabold text-neutral-900 dark:text-white">{eotmName}</div>
+              {eotm?.reason && (
+                <p className="mt-1 text-sm italic text-neutral-600 dark:text-neutral-400">"{eotm.reason}"</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-neutral-500">HR hasn't announced this month yet.</p>
+          )}
+          <Link
+            href="/employee/leaderboard"
+            className="mt-4 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            See full leaderboard →
+          </Link>
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, icon, trend, trendColor }: { label: string; value: string; icon: React.ReactNode; trend: string; trendColor: string }) {
+function Stat({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent?: "amber";
+}) {
+  const accents = {
+    amber: "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300",
+  };
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-50 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-          {icon}
-        </div>
-        <button className="text-neutral-400 hover:text-neutral-600">
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+    <div className="rounded-xl border border-neutral-200 bg-white p-5 dark:bg-neutral-900 dark:border-neutral-800">
+      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${accent ? accents[accent] : "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300"}`}>
+        {icon}
       </div>
-      <div className="text-sm font-semibold text-neutral-500">{label}</div>
-      <div className="mt-1 flex items-end gap-3">
-        <div className="text-3xl font-extrabold text-neutral-900 dark:text-white">{value}</div>
-      </div>
-      <div className={`mt-2 text-xs font-bold ${trendColor} flex items-center gap-1`}>
-        <TrendingUpIcon className="h-3 w-3" /> {trend}
-      </div>
+      <div className="text-xs font-semibold text-neutral-500">{label}</div>
+      <div className="mt-1 text-3xl font-extrabold text-neutral-900 dark:text-white">{value}</div>
     </div>
-  );
-}
-
-function AwayEmployee({ name, date, status }: { name: string; date: string; status: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-neutral-100 p-3 dark:border-neutral-800">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-          <div className="flex h-full w-full items-center justify-center text-xs font-bold text-neutral-400">
-            {name.charAt(0)}
-          </div>
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-neutral-900 dark:text-white">{name}</h4>
-          <p className="text-[10px] text-neutral-500">{date}</p>
-        </div>
-      </div>
-      <div className="rounded-full bg-neutral-50 px-3 py-1 text-[10px] font-bold text-neutral-600 border border-neutral-100 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700">
-        {status}
-      </div>
-    </div>
-  );
-}
-
-function TrendingUpIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-      <polyline points="17 6 23 6 23 12" />
-    </svg>
   );
 }

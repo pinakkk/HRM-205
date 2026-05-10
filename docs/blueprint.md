@@ -110,35 +110,54 @@ The system applies **three AI layers** on top of a conventional reward portal:
 
 ## 4. Core Feature Set
 
-### 4.1 Employee Features
+The product covers two role surfaces (Employee, HR/Admin) plus a band of optional advanced features. Each surface is structured around a fixed sidebar order — see §14.
 
-| ID | Feature | Description |
+### 4.1 Employee Features (sidebar order)
+
+| # | Sidebar item | Route | ID | Description |
+|---|---|---|---|---|
+| 1 | Dashboard | `/employee` | E-01 | Quick summary: points balance, attendance, performance score, badges, recent updates, current gamification level + streak. |
+| 2 | My Profile | `/employee/profile` | E-02 | View / edit name, photo URL, phone, bio, department (read-only), role (read-only), email (read-only). |
+| 3 | Attendance | `/employee/attendance` | E-03 | Daily check-in / check-out, history, monthly attendance %, current streak, leave records, QR check-in fallback. |
+| 4 | Performance | `/employee/performance` | E-04 | KPI assignments with progress, productivity score, monthly performance report, AI improvement suggestions. |
+| 5 | Rewards & Points | `/employee/rewards` | E-05 | Wallet balance, lifetime points, points history, link into redemption store. |
+| 6 | Badges & Achievements | `/employee/badges` | E-06 | Earned + locked badges with progress, rarity tiers (bronze/silver/gold/platinum). |
+| 7 | Bonuses | `/employee/bonus` | E-07 | Bonus history, year-to-date total, per-cycle breakdown, rationale snippet. |
+| 8 | Feedback | `/employee/feedback` | E-08 | View feedback received, send peer kudos, submit self-feedback / suggestions. |
+| 9 | Leaderboard | `/employee/leaderboard` | E-09 | Ranking by points / dept / tenure; current EOTM badge. |
+| 10 | Notifications | `/employee/notifications` | E-10 | In-app feed of rewards, bonuses, feedback, badges, announcements; bell icon in topbar. |
+| 11 | Settings | `/employee/settings` | E-11 | Notification preferences, privacy / DPDP consent (subsumes the old `/consent`), theme. |
+| 12 | Logout | (sidebar footer) | — | Sign-out form posting to `/auth/sign-out`. |
+
+### 4.2 HR / Admin Features (sidebar order)
+
+| # | Sidebar item | Route | ID | Description |
+|---|---|---|---|---|
+| 1 | Dashboard | `/admin` | A-01 | Total / active employees, attendance stats, reward distribution, perf summary, system activity, EOTM card. |
+| 2 | Employee Management | `/admin/users` | A-02 | CRUD employees, bulk CSV import, manage departments / roles. |
+| 3 | Attendance Management | `/admin/attendance` | A-03 | View attendance, late arrivals, leave approval queue, attendance % per dept. |
+| 4 | Performance Management | `/admin/kpis` | A-04 | Define KPIs, assign to employees, evaluate, monthly perf reports. |
+| 5 | Reward Management | `/admin/rewards` | A-05 | Hub linking manual award form, ledger view, reward rules, catalog editor, redemption approvals. |
+| 6 | Bonus Management | `/admin/allocator` | A-06 | AI bonus allocator with cycle history. |
+| 7 | Badge Management | `/admin/badges` | A-07 | CRUD badges, define `rule_json` criteria, view distribution. |
+| 8 | Feedback & Reviews | `/admin/feedback` | A-08 | Browse all feedback, sentiment summary, manager skew flags. |
+| 9 | Leaderboard Control | `/admin/leaderboard` | A-09 | Rankings, EOTM selection (auto-suggested + manual override). |
+| 10 | Reports & Analytics | `/admin/reports` | A-10 | Attendance / perf / reward analytics, CSV export, fairness audit tab. |
+| 11 | Announcements | `/admin/announcements` | A-11 | Compose & list company-wide announcements (audience: all / dept). |
+| 12 | Settings | `/admin/settings` | A-12 | Reward configuration (point rules), bonus pool defaults, role view, security toggles, dashboard preferences. |
+| 13 | Logout | (sidebar footer) | — | Sign-out form. |
+
+### 4.3 Optional Advanced Features
+
+| ID | Feature | Where surfaced |
 |---|---|---|
-| E-01 | Auth & Profile | Email/password login via Supabase Auth; profile with avatar, department, role. |
-| E-02 | Attendance Check-In | Daily check-in (with optional geofence); streak tracking. |
-| E-03 | KPI Dashboard | View KPIs assigned by admin; self-update progress with evidence. |
-| E-04 | Points Wallet | Real-time balance, lifetime earned, expiring soon. |
-| E-05 | Badges | Unlocked, locked-with-progress, rarity tiers. |
-| E-06 | Leaderboard | Department + company-wide; weekly/monthly toggle. |
-| E-07 | Peer Kudos | Send recognition to teammates (capped to prevent inflation). |
-| E-08 | Feedback Inbox | View 360° feedback received; sentiment-tagged. |
-| E-09 | Redemption Store | Spend points on vouchers, extra leave, swag. |
-| E-10 | Notifications | Realtime toast + in-app feed when rewards land. |
-
-### 4.2 HR Admin Features
-
-| ID | Feature | Description |
-|---|---|---|
-| A-01 | User Management | CRUD employees, bulk CSV import, assign departments. |
-| A-02 | KPI Builder | Define KPIs per role, weightings, evaluation periods. |
-| A-03 | Manual Reward Award | Award points/badges/bonus with reason. |
-| A-04 | **AI Bonus Allocator** | Input pool size → AI proposes splits → admin edits → publishes. |
-| A-05 | **Bias Audit Dashboard** | Distribution by gender/dept/tenure; fairness score; flagged anomalies. |
-| A-06 | Sentiment Overview | Aggregate sentiment of feedback per manager / per employee. |
-| A-07 | Anomaly Center | Suspicious attendance jumps near review periods, skewed feedback. |
-| A-08 | Redemption Approvals | Approve/reject employee redemptions. |
-| A-09 | Configuration | Point values, badge rules, redemption catalog, AI guardrails. |
-| A-10 | Audit Log | Append-only ledger view; export CSV. |
+| O-01 | Employee of the Month | `employee_of_month` table + `/admin/leaderboard` selector + dashboard cards on both sides. |
+| O-02 | Reward Store | `/employee/rewards` + `/admin/rewards`; existing catalog + redemption flow. |
+| O-03 | QR Attendance | `/employee/attendance` (scan / paste link) + `/admin/attendance` (QR poster). Signed token rotates every 5 minutes. |
+| O-04 | Real-Time Notifications | `notifications` table + bell in TopBar (5s polling fallback when Realtime unavailable). |
+| O-05 | AI Performance Suggestions | `/employee/performance` "Get suggestions" button → OpenRouter call with deterministic fallback. |
+| O-06 | Gamification Levels | Derived from `points_balance.lifetime_total`: Beginner / Performer / Achiever / Expert / Champion. Surfaced on profile, leaderboard, dashboard. |
+| O-07 | Daily Streaks | Derived from `attendance` (consecutive workdays); shown on attendance & dashboard; auto-awards a badge at 30-day milestone. |
 
 ---
 
@@ -334,8 +353,13 @@ GitHub  →  Vercel Preview (per PR)  →  Vercel Production (main)
 - `users` (1) ──< `feedback` (N) — `from_user_id`, `to_user_id`
 - `users` (1) ──< `rewards_ledger` (N)
 - `users` (1) ──< `redemptions` (N) >── (1) `catalog_items`
+- `users` (1) ──< `notifications` (N) — Phase 7
+- `users` (1) ──< `leaves` (N), `approver_id` → `users`
+- `users` (1) ──< `announcements` (N) as `author_id`
 - `badges` (1) ──< `user_badges` (N) >── (1) `users`
 - `allocation_cycles` (1) ──< `rewards_ledger` (N)
+- `employee_of_month` (1) — one row per (year, month), `user_id` → `users`
+- `reward_rules` — config-only, evaluated by cron / on ledger insert
 
 ### 8.2 SQL Schema (concise)
 
@@ -468,6 +492,77 @@ group by user_id;
 create unique index on public.points_balance (user_id);
 ```
 
+### 8.2b Phase 7 schema additions (migration `0008_phase2_features.sql`)
+
+```sql
+-- Profile fields used by My Profile + Settings
+alter table public.users
+  add column if not exists phone text,
+  add column if not exists bio text,
+  add column if not exists notification_prefs jsonb not null default
+    '{"in_app":true,"email_digest":true}'::jsonb;
+
+-- In-app notifications (polled by bell + listed on /employee/notifications)
+create table public.notifications (
+  id bigserial primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  type text not null check (type in ('reward','bonus','feedback','badge','announcement','system')),
+  title text not null,
+  body text,
+  link text,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- HR broadcasts
+create table public.announcements (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.users(id),
+  title text not null,
+  body text not null,
+  audience text not null default 'all' check (audience in ('all','engineering','sales','marketing','hr','finance')),
+  pinned boolean not null default false,
+  published_at timestamptz not null default now()
+);
+
+-- Leave requests
+create table public.leaves (
+  id bigserial primary key,
+  user_id uuid not null references public.users(id) on delete cascade,
+  start_date date not null,
+  end_date date not null,
+  type text not null check (type in ('casual','sick','earned','unpaid')),
+  reason text,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  approver_id uuid references public.users(id),
+  decided_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Configurable point-award rules (read by admin Settings + reward engine)
+create table public.reward_rules (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  trigger text not null,        -- e.g. 'attendance_streak_30','kpi_complete'
+  points int not null,
+  active boolean not null default true,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+-- Employee of the Month — one row per (year, month)
+create table public.employee_of_month (
+  year int not null,
+  month int not null check (month between 1 and 12),
+  user_id uuid not null references public.users(id),
+  score numeric,
+  reason text,
+  selected_by uuid references public.users(id),
+  selected_at timestamptz not null default now(),
+  primary key (year, month)
+);
+```
+
 ### 8.3 Indexes
 
 ```sql
@@ -476,6 +571,11 @@ create index on rewards_ledger (cycle_id);
 create index on attendance (user_id, check_in desc);
 create index on feedback (to_user_id, created_at desc);
 create index on audit_log (actor_id, created_at desc);
+create index on notifications (user_id, created_at desc);
+create index on notifications (user_id) where read_at is null;
+create index on leaves (user_id, start_date desc);
+create index on leaves (status) where status = 'pending';
+create index on announcements (published_at desc);
 ```
 
 ---
@@ -630,6 +730,17 @@ Results written to `audit_findings` table; LLM (L3) generates plain-English summ
 | GET | `/api/admin/audit/fairness` | admin | Bias metrics + narrator. |
 | POST | `/api/admin/users/import` | admin | CSV bulk import. |
 | GET | `/api/admin/export/csv?dataset=ledger` | admin | CSV export. |
+| POST | `/api/me/profile` | user | Update phone / bio / avatar_url / full_name. |
+| GET  | `/api/me/notifications` | user | Paginated notifications + unread count. |
+| POST | `/api/me/notifications/read` | user | Mark all (or one by id) as read. |
+| GET  | `/api/me/suggestions` | user | AI performance suggestions (deterministic fallback). |
+| POST | `/api/leaves` | user | Submit a leave request. |
+| POST | `/api/admin/leaves/[id]/decide` | admin | Approve / reject leave. |
+| POST | `/api/admin/announcements` | admin | Create announcement (fan-out notifications). |
+| GET  | `/api/announcements` | user | Recent announcements feed. |
+| POST | `/api/admin/eotm` | admin | Set / override Employee of the Month for a given (year, month). |
+| POST | `/api/attendance/qr` | user | Check-in via signed token (rotates every 5 min). |
+| GET  | `/api/admin/attendance/qr-token` | admin | Generates current signed QR token. |
 
 All mutating endpoints validate with Zod and return RFC 7807 problem details on error.
 
@@ -685,24 +796,36 @@ fairreward-ai/
     │   │   └── callback/route.ts
     │   ├── employee/
     │   │   ├── layout.tsx
-    │   │   ├── page.tsx             # dashboard
-    │   │   ├── attendance/page.tsx
-    │   │   ├── kpis/page.tsx
-    │   │   ├── feedback/page.tsx
-    │   │   ├── store/page.tsx
-    │   │   └── leaderboard/page.tsx
+    │   │   ├── page.tsx              # 1. Dashboard
+    │   │   ├── profile/page.tsx      # 2. My Profile
+    │   │   ├── attendance/page.tsx   # 3. Attendance (+ QR check-in form)
+    │   │   ├── performance/page.tsx  # 4. Performance (KPIs + AI suggestions)
+    │   │   ├── rewards/page.tsx      # 5. Rewards & Points
+    │   │   ├── badges/page.tsx       # 6. Badges & Achievements
+    │   │   ├── bonus/page.tsx        # 7. Bonuses
+    │   │   ├── feedback/page.tsx     # 8. Feedback (inbox + send kudos)
+    │   │   ├── leaderboard/page.tsx  # 9. Leaderboard
+    │   │   ├── notifications/page.tsx# 10. Notifications
+    │   │   └── settings/page.tsx     # 11. Settings (subsumes /consent)
     │   ├── admin/
     │   │   ├── layout.tsx
-    │   │   ├── page.tsx             # ops home
-    │   │   ├── users/page.tsx
-    │   │   ├── kpis/page.tsx
+    │   │   ├── page.tsx              # 1. Dashboard
+    │   │   ├── users/page.tsx        # 2. Employee Management
+    │   │   ├── attendance/page.tsx   # 3. Attendance Management (+ leave queue + QR poster)
+    │   │   ├── kpis/page.tsx         # 4. Performance Management
+    │   │   ├── rewards/page.tsx      # 5. Reward Management hub
     │   │   ├── allocator/
-    │   │   │   ├── page.tsx
+    │   │   │   ├── page.tsx          # 6. Bonus Management
     │   │   │   └── [cycleId]/page.tsx
-    │   │   ├── audit/page.tsx       # bias dashboard
-    │   │   ├── redemptions/page.tsx
-    │   │   ├── catalog/page.tsx
-    │   │   └── settings/page.tsx
+    │   │   ├── badges/page.tsx       # 7. Badge Management
+    │   │   ├── feedback/page.tsx     # 8. Feedback & Reviews
+    │   │   ├── leaderboard/page.tsx  # 9. Leaderboard Control + EOTM
+    │   │   ├── reports/page.tsx      # 10. Reports & Analytics
+    │   │   ├── announcements/page.tsx# 11. Announcements
+    │   │   ├── settings/page.tsx     # 12. Settings
+    │   │   ├── catalog/page.tsx      # (linked from Reward Management)
+    │   │   ├── redemptions/page.tsx  # (linked from Reward Management)
+    │   │   └── audit/page.tsx        # (linked from Reports & Analytics)
     │   └── api/
     │       ├── me/route.ts
     │       ├── attendance/check-in/route.ts
@@ -978,6 +1101,28 @@ APP_URL=https://fairreward.app
 - Final demo seed run.
 
 **Exit criteria:** `npm test` green, Lighthouse ≥ 90, production deploy on `main`.
+
+---
+
+### Phase 7 — Spec alignment & advanced features
+
+**Goal:** align routes/sidebars with the production spec and ship the optional advanced features.
+
+- Migration `0008_phase2_features.sql` — `notifications`, `announcements`, `leaves`, `reward_rules`, `employee_of_month`, profile fields.
+- Sidebar reorder/rename for both surfaces (see §4.1, §4.2).
+- New employee pages: Profile, Badges, Notifications, Settings (subsumes consent — `/employee/consent` removed).
+- New admin pages: Announcements, Reward Management hub. Allocator + Catalog + Redemptions + Audit relinked under their renamed parents.
+- Admin Settings built out (read-only reward rules + key system info).
+- Optional advanced features (O-01..O-07) surfaced per §4.3.
+  - EOTM = `employee_of_month` table + admin selector + cards.
+  - Levels = pure derivation in `lib/gamification.ts` (no schema).
+  - Streaks = derived in `lib/attendance.ts` from `attendance` rows.
+  - QR attendance = HMAC-signed token with 5-min window.
+  - Notifications bell = polled every 30s (Realtime upgrade is a one-line swap later).
+  - AI suggestions = OpenRouter call when `OPENROUTER_API_KEY` set, deterministic fallback otherwise.
+- Seed expanded: 1 admin + 8 employees + 60 days of attendance + KPIs + feedback + ledger + notifications + announcements + EOTM + leaves.
+
+**Exit criteria:** every sidebar item in §4.1 and §4.2 routes to a real page rendering live data; `npm run typecheck` and `npm test` green; seed populates a demo-able state.
 
 ---
 
