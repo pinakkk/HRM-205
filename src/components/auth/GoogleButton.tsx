@@ -61,25 +61,16 @@ export function GoogleButton({
 
   const isDark = variant === "dark";
   const buttonClass = isDark
-    ? "flex w-full items-center justify-center gap-3 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-100 transition-colors hover:border-neutral-600 hover:bg-neutral-800 disabled:opacity-60"
-    : "flex w-full items-center justify-center gap-3 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50 disabled:opacity-60";
+    ? "flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-violet-500 bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-xl shadow-violet-200 transition-colors hover:bg-violet-700 disabled:opacity-60"
+    : "flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-violet-200 bg-white px-4 py-3 text-sm font-bold text-violet-950 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 disabled:opacity-60";
 
   return (
     <div className="space-y-2">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={loading}
-        className={buttonClass}
-      >
+      <button type="button" onClick={onClick} disabled={loading} className={buttonClass}>
         <GoogleIcon />
         {loading ? "Redirecting…" : (label ?? "Continue with Google")}
       </button>
-      {error && (
-        <p className={isDark ? "text-sm text-rose-400" : "text-sm text-rose-600"}>
-          {error}
-        </p>
-      )}
+      {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
     </div>
   );
 }
