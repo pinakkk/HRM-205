@@ -29,11 +29,47 @@ body {
 }
 
 .brand-wordmark {
-  background: linear-gradient(90deg, #2e1065 0%, #6d28d9 52%, #a21caf 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-family: "Avenir Next", Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: -0.025em;
+  color: #1f1147;
+  font-feature-settings: "ss01" on, "ss02" on;
+  font-optical-sizing: auto;
+}
+
+.fr-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(124, 58, 237, 0.08);
+}
+
+.fr-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  animation: fr-shimmer 1.6s infinite;
+}
+
+@keyframes fr-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-skeleton::after {
+    animation: none;
+  }
+  .animate-fade-up,
+  .animate-fade-in {
+    animation: none !important;
+  }
 }

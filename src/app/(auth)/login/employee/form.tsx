@@ -11,7 +11,7 @@ export function EmployeeAuthPanel() {
   return (
     <div className="mt-8 space-y-4">
       {errorParam === "oauth_failed" && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
           Google sign-in failed. Please try again.
         </div>
       )}

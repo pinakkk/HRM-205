@@ -61,17 +61,58 @@ export function GoogleButton({
 
   const isDark = variant === "dark";
   const buttonClass = isDark
-    ? "flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-violet-500 bg-violet-600 px-4 py-3 text-sm font-bold text-white shadow-xl shadow-violet-200 transition-colors hover:bg-violet-700 disabled:opacity-60"
-    : "flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-violet-200 bg-white px-4 py-3 text-sm font-bold text-violet-950 shadow-sm transition-colors hover:border-violet-300 hover:bg-violet-50 disabled:opacity-60";
+    ? "relative flex min-h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-full border border-violet-200 bg-violet-200 px-4 py-3 text-sm font-semibold text-violet-900 transition-colors hover:bg-violet-300 disabled:cursor-wait disabled:opacity-90"
+    : "relative flex min-h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-full border border-violet-200 bg-white px-4 py-3 text-sm font-semibold text-violet-900 transition-colors hover:border-violet-300 hover:bg-violet-50 disabled:cursor-wait disabled:opacity-90";
 
   return (
     <div className="space-y-2">
       <button type="button" onClick={onClick} disabled={loading} className={buttonClass}>
-        <GoogleIcon />
-        {loading ? "Redirecting…" : (label ?? "Continue with Google")}
+        {loading ? (
+          <>
+            <span
+              className="pointer-events-none absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/60 to-transparent"
+              aria-hidden="true"
+            />
+            <Spinner />
+            <span>Redirecting</span>
+          </>
+        ) : (
+          <>
+            <GoogleIcon />
+            {label ?? "Continue with Google"}
+          </>
+        )}
       </button>
       {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      className="animate-spin"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        fill="none"
+        stroke="rgba(76,29,149,0.18)"
+        strokeWidth="3"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        fill="none"
+        stroke="#6d28d9"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
