@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatPoints } from "@/lib/utils";
 import { levelFromPoints, progressToNext } from "@/lib/gamification";
 import { currentStreak, attendancePercent } from "@/lib/streaks";
+import { LedgerRealtimeRefresh } from "./realtime-ledger-refresh";
 import {
   BadgeDollarSign,
   Briefcase,
@@ -72,6 +73,7 @@ export default async function EmployeeDashboard() {
 
   return (
     <div className="flex flex-col gap-8 pb-10">
+      <LedgerRealtimeRefresh userId={me.profile.id} />
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
           Welcome back, {me.profile.full_name.split(" ")[0]}

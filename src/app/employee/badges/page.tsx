@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Award, Lock } from "lucide-react";
+import { BadgesRealtimeRefresh } from "./realtime-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ export default async function BadgesPage() {
 
   return (
     <div className="flex flex-col gap-8 pb-10">
+      <BadgesRealtimeRefresh userId={me.profile.id} />
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Badges & Achievements</h1>
         <p className="text-sm text-neutral-500">

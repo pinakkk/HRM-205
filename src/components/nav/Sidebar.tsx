@@ -12,14 +12,21 @@ export function Sidebar({
   current,
   profile,
   onClose,
+  hideScrollbar,
 }: {
   items: NavItem[];
   current?: string;
   profile?: Profile;
   onClose?: () => void;
+  hideScrollbar?: boolean;
 }) {
   return (
-    <aside className="flex w-64 shrink-0 flex-col bg-[#111111] p-6 h-full text-white z-[60] overflow-y-auto">
+    <aside
+      className={cn(
+        "flex w-64 shrink-0 flex-col bg-[#111111] p-6 h-full text-white z-[60] overflow-y-auto",
+        hideScrollbar && "no-scrollbar",
+      )}
+    >
       <div className="mb-10 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl font-black tracking-tighter text-white">HRM</span>

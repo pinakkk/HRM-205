@@ -27,15 +27,23 @@ export default async function AdminUsersPage() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {data?.map((u) => (
-              <tr key={u.id}>
-                <td className="p-3">{u.full_name}</td>
-                <td className="p-3 text-neutral-500">{u.email}</td>
-                <td className="p-3 capitalize">{u.role}</td>
-                <td className="p-3">{u.department ?? "—"}</td>
-                <td className="p-3 text-neutral-500">{u.joined_at}</td>
-              </tr>
-            )) ?? null}
+            {data?.map((u) => {
+              const roleLabel = u.role === "admin"
+                ? "HR"
+                : u.role
+                ? u.role.charAt(0).toUpperCase() + u.role.slice(1)
+                : "";
+
+              return (
+                <tr key={u.id}>
+                  <td className="p-3">{u.full_name}</td>
+                  <td className="p-3 text-neutral-500">{u.email}</td>
+                  <td className="p-3">{roleLabel}</td>
+                  <td className="p-3">{u.department ?? "—"}</td>
+                  <td className="p-3 text-neutral-500">{u.joined_at}</td>
+                </tr>
+              );
+            }) ?? null}
           </tbody>
         </table>
       </div>

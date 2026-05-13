@@ -28,6 +28,16 @@ export async function POST(request: Request) {
     type: parsed.data.type,
     reason: parsed.data.reason ?? null,
   });
-  if (error) return problem(500, "Insert failed", error.message);
+  if (error) {
+    const msg = error.message ?? "Unknown error";
+    if (msg.includes("schema cache") && msg.includes("public.leaves")) {
+      return problem(
+        500,
+        "Database schema not ready",
+        "Missing `public.leaves` table or privileges. Apply Supabase migrations (e.g. `supabase db push`) and ensure GRANTs exist for the `authenticated` role, then retry.",
+      );
+    }
+    return problem(500, "Insert failed", msg);
+  }
   return ok({ status: "ok" });
 }

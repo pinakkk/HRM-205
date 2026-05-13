@@ -41,6 +41,12 @@ export default async function AttendancePage() {
   const pct = attendancePercent(checkIns, 30);
   const checkedInToday = (todayRes.data ?? []).length > 0;
   const leaves = leavesRes.data ?? [];
+  const leavesLoadError = leavesRes.error
+    ? leavesRes.error.message ?? "Failed to load leave requests"
+    : null;
+  const leavesSchemaNotReady =
+    (leavesLoadError?.includes("schema cache") ?? false) &&
+    (leavesLoadError?.includes("public.leaves") ?? false);
   const remainingLeaves = Math.max(0, 12 - leaves.filter((l) => l.status === "approved").length);
 
   return (
@@ -86,7 +92,13 @@ export default async function AttendancePage() {
             <div className="border-b border-neutral-100 px-5 py-3 dark:border-neutral-800">
               <h3 className="font-bold text-neutral-900 dark:text-white">My leaves</h3>
             </div>
-            {leaves.length > 0 ? (
+            {leavesSchemaNotReady ? (
+              <p className="px-5 py-6 text-center text-sm text-neutral-500">
+                Leave requests unavailable: missing <span className="font-mono">public.leaves</span> table or privileges.
+              </p>
+            ) : leavesLoadError ? (
+              <p className="px-5 py-6 text-center text-sm text-neutral-500">Leave requests unavailable.</p>
+            ) : leaves.length > 0 ? (
               <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
                 {leaves.map((l) => (
                   <li key={l.id} className="flex items-center justify-between px-5 py-3 text-sm">
