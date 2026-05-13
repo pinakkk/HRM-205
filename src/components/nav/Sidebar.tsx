@@ -23,7 +23,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex w-64 shrink-0 flex-col bg-[#111111] p-6 h-full text-white z-[60] overflow-y-auto",
+        "flex w-72 shrink-0 flex-col bg-[#111111] p-6 h-full text-white z-[60] overflow-y-auto",
         hideScrollbar && "no-scrollbar",
       )}
     >

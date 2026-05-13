@@ -47,7 +47,7 @@ export default function EmployeeLayoutClient({
         "fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 h-[100dvh]",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <Sidebar items={items} current={pathname} profile={profile} onClose={() => setIsMobileOpen(false)} />
+        <Sidebar items={items} current={pathname} profile={profile} onClose={() => setIsMobileOpen(false)} hideScrollbar />
       </div>
 
       <div className="flex-1 flex overflow-hidden">
