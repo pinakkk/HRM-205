@@ -29,7 +29,7 @@ export function Sidebar({
     >
       <div className="mb-10 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-black tracking-tighter text-white">HRM</span>
+          <span className="text-xl font-bold tracking-tight text-white">FairReward</span>
           <div className="h-1.5 w-1.5 rounded-full bg-[#FF4D4D]"></div>
         </div>
       </div>
@@ -58,15 +58,19 @@ export function Sidebar({
       <div className="mt-auto flex flex-col gap-4 border-t border-neutral-800 pt-6">
         {profile && (
           <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-bold border border-neutral-700">
+            <Link
+              href={profile.role === "employee" ? "/employee/profile" : "/admin"}
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-lg px-1 py-1 -mx-1 hover:bg-neutral-800/60 transition-colors min-w-0"
+            >
+              <div className="h-9 w-9 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-bold border border-neutral-700 shrink-0">
                 {profile.full_name.charAt(0)}
               </div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-sm font-semibold truncate w-24">{profile.full_name}</span>
                 <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{profile.role}</span>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-1">
               {profile.role === "employee" && <NotificationBell />}
               <ThemeToggle />

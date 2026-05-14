@@ -24,13 +24,25 @@ ChartJS.register(
   Filler
 );
 
-export function BonusPerformanceChart() {
+export function BonusPerformanceChart({
+  labels,
+  data,
+}: {
+  labels: string[];
+  data: number[];
+}) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx: { parsed: { y: number | null } }) =>
+            `₹${Number(ctx.parsed.y ?? 0).toLocaleString()}`,
+        },
       },
     },
     scales: {
@@ -44,17 +56,20 @@ export function BonusPerformanceChart() {
         grid: {
           color: '#f1f5f9',
         },
+        ticks: {
+          callback: (val: string | number) => `₹${Number(val).toLocaleString()}`,
+        },
       },
     },
   };
 
-  const data = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  const chartData = {
+    labels,
     datasets: [
       {
         fill: true,
-        label: 'Performance Score',
-        data: [85, 88, 92, 90, 95, 98],
+        label: 'Bonus',
+        data,
         borderColor: '#6366f1',
         backgroundColor: 'rgba(99, 102, 241, 0.1)',
         tension: 0.4,
@@ -62,5 +77,5 @@ export function BonusPerformanceChart() {
     ],
   };
 
-  return <Line options={options} data={data} />;
+  return <Line options={options} data={chartData} />;
 }

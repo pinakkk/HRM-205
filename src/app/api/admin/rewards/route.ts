@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, problem } from "@/lib/http";
 import { cacheInvalidate, cacheKeys } from "@/lib/redis";
 import { notify } from "@/lib/notifications";
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
     awarded_by: user.id,
   });
   if (error) return problem(500, "Insert failed", error.message);
+
+  try {
+    await createAdminClient().rpc("refresh_points_balance");
+  } catch {
+    /* best-effort — dashboard also derives balance from the ledger directly */
+  }
 
   await cacheInvalidate(
     cacheKeys.wallet(parsed.data.user_id),

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { NewCycleButton } from "./new-cycle-button";
+import { CycleRowActions } from "./cycle-row-actions";
 
 export default async function AllocatorIndex() {
   const supabase = await createClient();
@@ -30,24 +30,33 @@ export default async function AllocatorIndex() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {cycles?.map((c) => (
-              <tr key={c.id}>
-                <td className="p-3 font-medium">{c.label}</td>
-                <td className="p-3 font-mono">₹{Number(c.pool_amount).toLocaleString("en-IN")}</td>
-                <td className="p-3 capitalize">{c.status}</td>
-                <td className="p-3 text-neutral-500">
-                  {new Date(c.created_at).toLocaleDateString()}
-                </td>
-                <td className="p-3 text-right">
-                  <Link
-                    className="text-indigo-600 hover:underline"
-                    href={`/admin/allocator/${c.id}`}
-                  >
-                    Open →
-                  </Link>
+            {cycles && cycles.length > 0 ? (
+              cycles.map((c) => (
+                <tr key={c.id}>
+                  <td className="p-3 font-medium">{c.label}</td>
+                  <td className="p-3 font-mono">
+                    ₹{Number(c.pool_amount).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-3 capitalize">{c.status}</td>
+                  <td className="p-3 text-neutral-500">
+                    {new Date(c.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="p-3 text-right">
+                    <CycleRowActions
+                      cycleId={c.id}
+                      cycleLabel={c.label}
+                      status={c.status}
+                    />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="p-6 text-center text-sm text-neutral-500">
+                  No allocation cycles yet. Click &quot;New cycle&quot; to start.
                 </td>
               </tr>
-            )) ?? null}
+            )}
           </tbody>
         </table>
       </div>

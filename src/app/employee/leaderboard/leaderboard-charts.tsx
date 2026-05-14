@@ -8,74 +8,49 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+  type ChartOptions,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-export function DepartmentChart() {
-  const options = {
-    indexAxis: 'y' as const,
+const PALETTE = ["#6366f1", "#22d3ee", "#bef264", "#fb923c", "#f472b6", "#94a3b8"];
+
+export function DepartmentChart({ data }: { data: { label: string; total: number }[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs text-neutral-400">
+        No points awarded this month yet.
+      </div>
+    );
+  }
+
+  const options: ChartOptions<"bar"> = {
+    indexAxis: "y",
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
+    plugins: { legend: { display: false } },
     scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          display: false,
-        },
-        border: {
-          display: false,
-        }
-      },
+      x: { grid: { display: false }, ticks: { display: false }, border: { display: false } },
       y: {
-        grid: {
-          display: false,
-        },
-        border: {
-          display: false,
-        },
-        ticks: {
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          }
-        }
+        grid: { display: false },
+        border: { display: false },
+        ticks: { font: { size: 12, weight: "bold" } },
       },
     },
   };
 
-  const data = {
-    labels: ['Engineering', 'Marketing', 'Sales', 'Product', 'Design'],
+  const chartData = {
+    labels: data.map((d) => d.label),
     datasets: [
       {
-        data: [12500, 8400, 15200, 9100, 11300],
-        backgroundColor: [
-          '#6366f1', // Indigo-500
-          '#22d3ee', // Cyan-400
-          '#bef264', // Lime-300
-          '#fb923c', // Orange-400
-          '#f472b6', // Pink-400
-        ],
+        data: data.map((d) => d.total),
+        backgroundColor: data.map((_, i) => PALETTE[i % PALETTE.length]),
         borderRadius: 8,
         barThickness: 20,
       },
     ],
   };
 
-  return <Bar options={options} data={data} />;
+  return <Bar options={options} data={chartData} />;
 }

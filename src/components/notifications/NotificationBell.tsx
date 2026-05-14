@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 
@@ -20,7 +20,10 @@ export function NotificationBell() {
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,11 +50,37 @@ export function NotificationBell() {
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target)) return;
+      if (popoverRef.current?.contains(target)) return;
+      setOpen(false);
     }
     if (open) document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const POPOVER_WIDTH = 320;
+      const margin = 8;
+      const left = Math.min(
+        Math.max(margin, rect.right + margin),
+        window.innerWidth - POPOVER_WIDTH - margin,
+      );
+      const top = Math.max(margin, rect.bottom - 320);
+      setPos({ top, left });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
   }, [open]);
 
   async function markAll() {
@@ -69,6 +98,7 @@ export function NotificationBell() {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
         className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-400 hover:bg-neutral-800 hover:text-white"
@@ -80,8 +110,11 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl dark:bg-neutral-900 dark:border-neutral-800">
+      {open && pos && (
+        <div
+          ref={popoverRef}
+          style={{ top: pos.top, left: pos.left, width: 320 }}
+          className="fixed z-[100] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl dark:bg-neutral-900 dark:border-neutral-800">
           <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2 dark:border-neutral-800">
             <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Notifications</span>
             <button

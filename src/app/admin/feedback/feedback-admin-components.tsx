@@ -1,170 +1,319 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Star,
   MessageSquare,
   Send,
   ThumbsUp,
+  ThumbsDown,
   AlertCircle,
-  ChevronRight
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SentimentChip } from "@/components/feedback/SentimentChip";
+import { toasts } from "@/components/ui/Toaster";
 
-export function FeedbackStats() {
+type Sentiment = "positive" | "neutral" | "constructive" | "negative" | null;
+
+export type SentimentTotals = {
+  positive: number;
+  neutral: number;
+  constructive: number;
+  negative: number;
+  unclassified: number;
+  total: number;
+};
+
+export type ReviewItem = {
+  id: number;
+  employee: string;
+  employee_department: string | null;
+  reviewer: string;
+  reviewer_role: string;
+  created_at: string;
+  body: string;
+  sentiment: Sentiment;
+  sentiment_score: number | null;
+};
+
+export type Peer = {
+  id: string;
+  full_name: string;
+  department: string | null;
+};
+
+function pct(value: number, total: number) {
+  if (!total) return "0%";
+  return `${Math.round((value / total) * 100)}%`;
+}
+
+export function FeedbackStats({ totals }: { totals: SentimentTotals }) {
+  const classifiedTotal =
+    totals.positive + totals.neutral + totals.constructive + totals.negative;
   const stats = [
-    { label: "Positive Reviews", value: "85%", trend: "+5%", icon: <ThumbsUp className="h-5 w-5 text-emerald-600" />, bgColor: "bg-emerald-50" },
-    { label: "Neutral Reviews", value: "12%", trend: "-2%", icon: <MessageSquare className="h-5 w-5 text-blue-600" />, bgColor: "bg-blue-50" },
-    { label: "Constructive", value: "03%", trend: "-3%", icon: <AlertCircle className="h-5 w-5 text-amber-600" />, bgColor: "bg-amber-50" },
-    { label: "Total Feedback", value: "1,240", trend: "+120", icon: <Star className="h-5 w-5 text-indigo-600" />, bgColor: "bg-indigo-50" },
+    {
+      label: "Positive",
+      value: pct(totals.positive, classifiedTotal),
+      sub: `${totals.positive} of ${classifiedTotal} classified`,
+      icon: <ThumbsUp className="h-5 w-5 text-emerald-600" />,
+      bgColor: "bg-emerald-50",
+    },
+    {
+      label: "Neutral",
+      value: pct(totals.neutral, classifiedTotal),
+      sub: `${totals.neutral} entries`,
+      icon: <MessageSquare className="h-5 w-5 text-blue-600" />,
+      bgColor: "bg-blue-50",
+    },
+    {
+      label: "Constructive",
+      value: pct(totals.constructive, classifiedTotal),
+      sub: `${totals.constructive} entries`,
+      icon: <AlertCircle className="h-5 w-5 text-amber-600" />,
+      bgColor: "bg-amber-50",
+    },
+    {
+      label: "Negative",
+      value: pct(totals.negative, classifiedTotal),
+      sub: `${totals.negative} entries`,
+      icon: <ThumbsDown className="h-5 w-5 text-rose-600" />,
+      bgColor: "bg-rose-50",
+    },
+    {
+      label: "Total Feedback",
+      value: String(totals.total),
+      sub:
+        totals.unclassified > 0
+          ? `${totals.unclassified} awaiting sentiment`
+          : "All classified",
+      icon: <Inbox className="h-5 w-5 text-indigo-600" />,
+      bgColor: "bg-indigo-50",
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
       {stats.map((stat, i) => (
-        <div key={i} className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", stat.bgColor)}>
+        <div
+          key={i}
+          className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <div
+              className={cn(
+                "flex h-12 w-12 items-center justify-center rounded-2xl",
+                stat.bgColor,
+              )}
+            >
               {stat.icon}
             </div>
-            <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-              {stat.trend}
-            </div>
           </div>
-          <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider">{stat.label}</p>
-          <div className="mt-1 text-2xl font-black text-neutral-900">{stat.value}</div>
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            {stat.label}
+          </p>
+          <div className="mt-1 text-2xl font-black text-neutral-900 dark:text-white">
+            {stat.value}
+          </div>
+          <p className="mt-1 text-[10px] text-neutral-500">{stat.sub}</p>
         </div>
       ))}
     </div>
   );
 }
 
-export function ProvideFeedback() {
+export function ProvideFeedback({ peers }: { peers: Peer[] }) {
+  const router = useRouter();
   const [employee, setEmployee] = useState("");
   const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!employee) {
+      toasts.error("Pick an employee");
+      return;
+    }
+    if (comment.trim().length < 3) {
+      toasts.error("Feedback is too short");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ to_user_id: employee, body: comment.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? body.title ?? "Failed");
+      }
+      toasts.success("Feedback sent");
+      setEmployee("");
+      setComment("");
+      router.refresh();
+    } catch (err) {
+      toasts.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div className="mb-6">
-        <h3 className="text-lg font-bold text-neutral-900">Provide Feedback</h3>
-        <p className="text-xs text-neutral-500">Directly send feedback to an employee</p>
+        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+          Provide Feedback
+        </h3>
+        <p className="text-xs text-neutral-500">
+          Send feedback directly to an employee
+        </p>
       </div>
       <div className="space-y-4">
         <div>
-          <label className="text-xs font-bold text-neutral-400 uppercase mb-1.5 block">Select Employee</label>
-          <select 
-            className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          <label className="mb-1.5 block text-xs font-bold uppercase text-neutral-400">
+            Select Employee
+          </label>
+          <select
+            className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-neutral-700 dark:bg-neutral-950"
             value={employee}
             onChange={(e) => setEmployee(e.target.value)}
           >
             <option value="">Choose an employee...</option>
-            <option value="1">Alex Rivera</option>
-            <option value="2">Sarah Chen</option>
-            <option value="3">James Wilson</option>
+            {peers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+                {p.department ? ` · ${p.department}` : ""}
+              </option>
+            ))}
           </select>
         </div>
         <div>
-          <label className="text-xs font-bold text-neutral-400 uppercase mb-1.5 block">Feedback Message</label>
-          <textarea 
-            className="w-full h-32 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+          <label className="mb-1.5 block text-xs font-bold uppercase text-neutral-400">
+            Feedback Message
+          </label>
+          <textarea
+            className="h-32 w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:border-neutral-700 dark:bg-neutral-950"
             placeholder="Write your feedback here..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
         </div>
-        <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 py-3 text-sm font-bold text-white hover:bg-neutral-800 transition-all">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 py-3 text-sm font-bold text-white transition-all hover:bg-neutral-800 disabled:opacity-60"
+        >
           <Send className="h-4 w-4" />
-          Send Feedback
+          {busy ? "Sending…" : "Send Feedback"}
         </button>
       </div>
     </div>
   );
 }
 
-export function EmployeeReviewSystem() {
-  const reviews = [
-    { id: 1, employee: "Sarah Chen", reviewer: "Admin", date: "2 hours ago", rating: 5, comment: "Excellent performance in the last project. Great teamwork!", sentiment: "positive" },
-    { id: 2, employee: "James Wilson", reviewer: "Manager", date: "5 hours ago", rating: 4, comment: "Good progress on targets. Need to work on communication.", sentiment: "neutral" },
-    { id: 3, employee: "Alex Rivera", reviewer: "Peer", date: "Yesterday", rating: 5, comment: "Always helpful and proactive. A pleasure to work with.", sentiment: "positive" },
-  ];
-
-  return (
-    <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between border-b border-neutral-50 p-6">
-        <div>
-          <h3 className="text-lg font-bold text-neutral-900">Employee Review System</h3>
-          <p className="text-xs text-neutral-500">Comprehensive list of all employee reviews</p>
-        </div>
-        <button className="text-xs font-bold text-red-600 hover:underline">View All</button>
-      </div>
-      <div className="divide-y divide-neutral-50">
-        {reviews.map((review) => (
-          <div key={review.id} className="p-6 hover:bg-neutral-50 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-bold text-neutral-500">
-                  {review.employee.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-neutral-900">{review.employee}</h4>
-                  <p className="text-[10px] text-neutral-500">Reviewed by {review.reviewer} • {review.date}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className={cn("h-3 w-3", i < review.rating ? "fill-amber-400 text-amber-400" : "text-neutral-200")} />
-                ))}
-              </div>
-            </div>
-            <p className="text-sm text-neutral-600 leading-relaxed italic">"{review.comment}"</p>
-            <div className="mt-4 flex items-center gap-2">
-              <span className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
-                review.sentiment === "positive" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
-              )}>
-                {review.sentiment}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const d = Math.floor(hr / 24);
+  if (d < 7) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
 }
 
-export function ManagerComments() {
-  const comments = [
-    { manager: "Marcus Aurelius", employee: "Sarah Chen", text: "Ready for promotion to Senior Designer.", priority: "high" },
-    { manager: "Seneca the Younger", employee: "Alex Rivera", text: "Requires training in advanced React patterns.", priority: "medium" },
+export function EmployeeReviewSystem({ reviews }: { reviews: ReviewItem[] }) {
+  const [filter, setFilter] = useState<"all" | Exclude<Sentiment, null>>("all");
+
+  const filtered = reviews.filter((r) =>
+    filter === "all" ? true : r.sentiment === filter,
+  );
+
+  const tones: Array<{ value: "all" | Exclude<Sentiment, null>; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "positive", label: "Positive" },
+    { value: "neutral", label: "Neutral" },
+    { value: "constructive", label: "Constructive" },
+    { value: "negative", label: "Negative" },
   ];
 
   return (
-    <div className="rounded-2xl border border-neutral-100 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-lg font-bold text-neutral-900">Manager Comments</h3>
-        <span className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center text-[10px] font-bold text-white">
-          {comments.length}
-        </span>
-      </div>
-      <div className="space-y-4">
-        {comments.map((c, i) => (
-          <div key={i} className="group relative rounded-xl border border-neutral-50 p-4 hover:border-red-100 transition-colors">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-8 w-8 rounded-lg bg-neutral-900 flex items-center justify-center text-[10px] font-bold text-white">
-                {c.manager.split(' ')[0][0]}{c.manager.split(' ')[1][0]}
-              </div>
-              <div>
-                <p className="text-xs font-bold text-neutral-900">{c.manager}</p>
-                <p className="text-[10px] text-neutral-400">regarding {c.employee}</p>
-              </div>
-            </div>
-            <p className="text-xs text-neutral-600 line-clamp-2">{c.text}</p>
-            <button className="mt-3 flex items-center gap-1 text-[10px] font-bold text-red-600 group-hover:gap-2 transition-all">
-              Read More <ChevronRight className="h-3 w-3" />
+    <div className="overflow-hidden rounded-2xl border border-neutral-100 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="flex flex-col gap-3 border-b border-neutral-50 p-6 dark:border-neutral-800 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+            Employee Review System
+          </h3>
+          <p className="text-xs text-neutral-500">
+            Peer feedback across the company, sorted by recency
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1 rounded-md border border-neutral-200 bg-neutral-50 p-1 text-xs dark:border-neutral-800 dark:bg-neutral-950">
+          {tones.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setFilter(t.value)}
+              className={cn(
+                "rounded px-2 py-1",
+                filter === t.value
+                  ? "bg-white font-semibold shadow-sm dark:bg-neutral-800 dark:text-white"
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
+              )}
+            >
+              {t.label}
             </button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="p-10 text-center text-sm text-neutral-500">
+          No feedback to show.
+        </div>
+      ) : (
+        <div className="divide-y divide-neutral-50 dark:divide-neutral-800">
+          {filtered.map((r) => (
+            <div
+              key={r.id}
+              className="p-6 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                    {r.employee.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                      {r.employee}
+                      {r.employee_department ? (
+                        <span className="ml-1 text-[10px] font-normal text-neutral-400">
+                          · {r.employee_department}
+                        </span>
+                      ) : null}
+                    </h4>
+                    <p className="text-[10px] text-neutral-500">
+                      from {r.reviewer} ({r.reviewer_role}) · {timeAgo(r.created_at)}
+                    </p>
+                  </div>
+                </div>
+                <SentimentChip sentiment={r.sentiment} />
+              </div>
+              <p className="text-sm italic leading-relaxed text-neutral-600 dark:text-neutral-300">
+                &ldquo;{r.body}&rdquo;
+              </p>
+              {r.sentiment_score !== null ? (
+                <div className="mt-2 text-[10px] text-neutral-400">
+                  score {r.sentiment_score.toFixed(2)}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

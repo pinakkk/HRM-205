@@ -1,30 +1,79 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPoints } from "@/lib/utils";
 import { requireUser } from "@/lib/auth";
 import { DepartmentChart } from "./leaderboard-charts";
-import { 
-  Trophy, 
-  TrendingUp, 
-  Users, 
-  Medal, 
-  Search, 
+import {
+  Trophy,
+  TrendingUp,
+  Users,
+  Medal,
+  Search,
   Filter,
-  BarChart2
+  BarChart2,
 } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
   const me = await requireUser();
   const supabase = await createClient();
-  
-  // Fetch full leaderboard
-  const { data } = await supabase
-    .from("leaderboard")
-    .select("user_id, full_name, department, balance")
-    .order("balance", { ascending: false })
-    .limit(20);
 
-  const topThree = data?.slice(0, 3) ?? [];
-  const restOfList = data?.slice(3) ?? [];
+  try {
+    await createAdminClient().rpc("refresh_points_balance");
+  } catch {
+    /* best-effort */
+  }
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const [boardRes, ledgerRes] = await Promise.all([
+    supabase
+      .from("leaderboard")
+      .select("user_id, full_name, department, role, balance")
+      .eq("role", "employee")
+      .order("balance", { ascending: false }),
+    supabase
+      .from("rewards_ledger")
+      .select("user_id, kind, amount, created_at")
+      .gte("created_at", monthStart.toISOString()),
+  ]);
+
+  type BoardRow = { user_id: string; full_name: string; department: string | null; balance: number };
+  const allRows = (boardRes.data ?? []) as BoardRow[];
+  const data = allRows.slice(0, 20);
+  const topThree = data.slice(0, 3);
+  const restOfList = data.slice(3);
+
+  const participants = allRows.filter((r) => Number(r.balance ?? 0) > 0).length;
+  const myIndex = allRows.findIndex((r) => r.user_id === me.profile.id);
+  const myRank = myIndex >= 0 ? myIndex + 1 : null;
+  const myPercentile =
+    myRank && allRows.length > 0 ? Math.round((myRank / allRows.length) * 100) : null;
+
+  let monthPointsTotal = 0;
+  let monthPointsRows = 0;
+  const deptMonth = new Map<string, number>();
+  const deptByUser = new Map(allRows.map((r) => [r.user_id, r.department ?? "Unassigned"]));
+  for (const row of ledgerRes.data ?? []) {
+    if (row.kind !== "points" && row.kind !== "kudos" && row.kind !== "bonus") continue;
+    const amt = Number(row.amount ?? 0);
+    if (row.kind !== "bonus") {
+      monthPointsTotal += amt;
+      monthPointsRows += 1;
+    }
+    const dept = deptByUser.get(row.user_id) ?? "Unassigned";
+    if (row.kind !== "bonus") deptMonth.set(dept, (deptMonth.get(dept) ?? 0) + amt);
+  }
+  const avgMonthlyPoints =
+    monthPointsRows === 0 ? 0 : Math.round(monthPointsTotal / Math.max(1, participants || monthPointsRows));
+
+  const departmentChartData = Array.from(deptMonth.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, total]) => ({ label, total }));
 
   return (
     <div className="flex flex-col gap-8 pb-10">
@@ -127,8 +176,12 @@ export default async function LeaderboardPage() {
               </div>
               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Your Rank</span>
             </div>
-            <div className="text-4xl font-black">#12</div>
-            <p className="mt-2 text-xs text-indigo-100">You are in the top 15% of employees this month. Keep it up!</p>
+            <div className="text-4xl font-black">{myRank ? `#${myRank}` : "—"}</div>
+            <p className="mt-2 text-xs text-indigo-100">
+              {myRank && myPercentile !== null
+                ? `Top ${myPercentile}% of ${allRows.length} employees. Keep it up!`
+                : "Earn points to enter the leaderboard."}
+            </p>
           </div>
 
           {/* Department-wise Ranking Chart */}
@@ -139,7 +192,7 @@ export default async function LeaderboardPage() {
               </h3>
             </div>
             <div className="h-[250px] w-full">
-              <DepartmentChart />
+              <DepartmentChart data={departmentChartData} />
             </div>
             <div className="mt-4 text-[10px] text-center text-neutral-500 italic">
               Points accumulation by department (current cycle)
@@ -153,13 +206,13 @@ export default async function LeaderboardPage() {
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
                   <Users className="h-4 w-4" /> Total Participants
                 </div>
-                <span className="text-xs font-black text-neutral-900 dark:text-white">128</span>
+                <span className="text-xs font-black text-neutral-900 dark:text-white">{formatPoints(participants)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
                   <Trophy className="h-4 w-4" /> Avg. Monthly Points
                 </div>
-                <span className="text-xs font-black text-neutral-900 dark:text-white">1,420</span>
+                <span className="text-xs font-black text-neutral-900 dark:text-white">{formatPoints(avgMonthlyPoints)}</span>
               </div>
             </div>
           </div>

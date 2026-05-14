@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { toasts } from "@/components/ui/Toaster";
 
 type Suggestion = { headline: string; tips: string[]; source: "ai" | "fallback" };
@@ -29,7 +29,6 @@ export function SuggestionsPanel() {
   return (
     <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 dark:border-indigo-900/40 dark:from-indigo-900/20 dark:to-neutral-900">
       <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-        <Sparkles className="h-5 w-5" />
         <h3 className="font-bold">AI improvement tips</h3>
       </div>
       <p className="mt-1 text-xs text-neutral-500">

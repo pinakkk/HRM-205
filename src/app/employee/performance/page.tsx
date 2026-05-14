@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SuggestionsPanel } from "./suggestions";
+import { KpiList, type EmployeeKpiRow } from "./kpi-list";
 import { BarChart3, Target } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -14,63 +15,108 @@ type AssignmentRow = {
   kpis: { title: string; description: string | null; weight: number } | null;
 };
 
+type SubmissionRow = {
+  id: number;
+  assignment_id: number;
+  achieved: number;
+  status: "pending" | "approved" | "rejected";
+  decision_note: string | null;
+  decided_at: string | null;
+  created_at: string;
+};
+
 export default async function PerformancePage() {
   const me = await requireUser();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("kpi_assignments")
-    .select("id, cycle, target, achieved, evidence_url, kpis(title, description, weight)")
-    .eq("user_id", me.profile.id)
-    .order("cycle", { ascending: false });
+  const [{ data: assignments }, { data: submissions }] = await Promise.all([
+    supabase
+      .from("kpi_assignments")
+      .select("id, cycle, target, achieved, evidence_url, kpis(title, description, weight)")
+      .eq("user_id", me.profile.id)
+      .order("cycle", { ascending: false }),
+    supabase
+      .from("kpi_submissions")
+      .select("id, assignment_id, achieved, status, decision_note, decided_at, created_at")
+      .eq("user_id", me.profile.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const rows = (data ?? []) as unknown as AssignmentRow[];
+  const rawRows = (assignments ?? []) as unknown as AssignmentRow[];
+  const subs = (submissions ?? []) as SubmissionRow[];
 
-  const score = computeScore(rows);
+  const pendingByAssignment = new Map<number, SubmissionRow>();
+  const lastDecidedByAssignment = new Map<number, SubmissionRow>();
+  for (const s of subs) {
+    if (s.status === "pending") {
+      if (!pendingByAssignment.has(s.assignment_id)) {
+        pendingByAssignment.set(s.assignment_id, s);
+      }
+    } else if (!lastDecidedByAssignment.has(s.assignment_id)) {
+      lastDecidedByAssignment.set(s.assignment_id, s);
+    }
+  }
+
+  const rows: EmployeeKpiRow[] = rawRows.map((r) => {
+    const pending = pendingByAssignment.get(r.id);
+    const last = lastDecidedByAssignment.get(r.id);
+    return {
+      ...r,
+      pending_submission: pending
+        ? { id: pending.id, achieved: pending.achieved, created_at: pending.created_at }
+        : null,
+      last_decision: last
+        ? {
+            status: last.status === "approved" ? "approved" : "rejected",
+            decision_note: last.decision_note,
+            decided_at: last.decided_at,
+          }
+        : null,
+    };
+  });
+
+  const score = computeScore(rawRows);
+  const activeCount = rawRows.filter(
+    (r) => Number(r.achieved ?? 0) < Number(r.target ?? 0),
+  ).length;
+  const completedCount = rawRows.filter(
+    (r) => Number(r.achieved ?? 0) >= Number(r.target ?? 0) && Number(r.target ?? 0) > 0,
+  ).length;
 
   return (
     <div className="flex flex-col gap-8 pb-10">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Performance</h1>
-        <p className="text-sm text-neutral-500">Your KPI progress and AI-powered improvement suggestions.</p>
+        <p className="text-sm text-neutral-500">
+          Your KPI progress and AI-powered improvement suggestions.
+        </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Stat label="Overall productivity" value={`${score}%`} icon={<Target className="h-5 w-5" />} accent="indigo" />
-        <Stat label="Active KPIs" value={String(rows.filter((r) => Number(r.achieved ?? 0) < Number(r.target ?? 0)).length)} icon={<BarChart3 className="h-5 w-5" />} accent="amber" />
-        <Stat label="Completed KPIs" value={String(rows.filter((r) => Number(r.achieved ?? 0) >= Number(r.target ?? 0) && Number(r.target ?? 0) > 0).length)} icon={<Target className="h-5 w-5" />} accent="emerald" />
+        <Stat
+          label="Overall productivity"
+          value={`${score}%`}
+          icon={<Target className="h-5 w-5" />}
+          accent="indigo"
+        />
+        <Stat
+          label="Active KPIs"
+          value={String(activeCount)}
+          icon={<BarChart3 className="h-5 w-5" />}
+          accent="amber"
+        />
+        <Stat
+          label="Completed KPIs"
+          value={String(completedCount)}
+          icon={<Target className="h-5 w-5" />}
+          accent="emerald"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-xl border border-neutral-200 bg-white p-6 dark:bg-neutral-900 dark:border-neutral-800">
           <h3 className="mb-4 font-bold text-neutral-900 dark:text-white">My KPIs</h3>
-          {rows.length === 0 ? (
-            <p className="py-10 text-center text-sm text-neutral-500">No KPIs assigned yet.</p>
-          ) : (
-            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {rows.map((row) => {
-                const target = Number(row.target ?? 0);
-                const achieved = Number(row.achieved ?? 0);
-                const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 0;
-                return (
-                  <li key={row.id} className="py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-neutral-900 dark:text-white">{row.kpis?.title}</div>
-                        <div className="text-xs text-neutral-500">Cycle {row.cycle} · weight {row.kpis?.weight ?? 1}</div>
-                      </div>
-                      <div className="font-mono text-sm text-neutral-700 dark:text-neutral-300">
-                        {achieved} / {target || "—"}
-                      </div>
-                    </div>
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-neutral-100 dark:bg-neutral-800">
-                      <div className="h-full bg-indigo-600" style={{ width: `${pct}%` }} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <KpiList rows={rows} />
         </div>
 
         <div className="lg:col-span-1">
@@ -95,7 +141,17 @@ function computeScore(rows: AssignmentRow[]): number {
   return weight === 0 ? 0 : Math.round((weighted / weight) * 100);
 }
 
-function Stat({ label, value, icon, accent }: { label: string; value: string; icon: React.ReactNode; accent: "indigo" | "amber" | "emerald" }) {
+function Stat({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent: "indigo" | "amber" | "emerald";
+}) {
   const accents = {
     indigo: "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300",
     amber: "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300",
@@ -103,7 +159,9 @@ function Stat({ label, value, icon, accent }: { label: string; value: string; ic
   };
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:bg-neutral-900 dark:border-neutral-800">
-      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${accents[accent]}`}>{icon}</div>
+      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${accents[accent]}`}>
+        {icon}
+      </div>
       <div className="text-sm font-semibold text-neutral-500">{label}</div>
       <div className="mt-1 text-3xl font-extrabold text-neutral-900 dark:text-white">{value}</div>
     </div>

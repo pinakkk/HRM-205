@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const MIN_POOL = 1000;
+
 export function NewCycleButton() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -11,15 +13,31 @@ export function NewCycleButton() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function localValidation(): string | null {
+    const trimmed = label.trim();
+    if (trimmed.length < 3) return "Label must be at least 3 characters.";
+    if (!/[A-Za-z]/.test(trimmed)) return "Label must contain at least one letter.";
+    const amount = Number(pool);
+    if (!Number.isFinite(amount) || amount <= 0) return "Pool must be a positive number.";
+    if (!Number.isInteger(amount)) return "Pool must be a whole rupee amount.";
+    if (amount < MIN_POOL) return `Pool must be at least ₹${MIN_POOL.toLocaleString("en-IN")}.`;
+    return null;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const localErr = localValidation();
+    if (localErr) {
+      setError(localErr);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch("/api/admin/allocator/cycles", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ label, pool_amount: Number(pool) }),
+        body: JSON.stringify({ label: label.trim(), pool_amount: Number(pool) }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -73,11 +91,16 @@ export function NewCycleButton() {
                 value={pool}
                 onChange={(e) => setPool(e.target.value)}
                 type="number"
-                min="1"
+                min={MIN_POOL}
                 step="1"
                 required
+                placeholder={`min ₹${MIN_POOL.toLocaleString("en-IN")}`}
                 className="w-full rounded border px-2 py-1 text-sm font-mono"
               />
+              <p className="text-[10px] text-neutral-500">
+                Minimum ₹{MIN_POOL.toLocaleString("en-IN")}. The server also enforces ₹100 per
+                employee so each allocation is meaningful.
+              </p>
             </div>
             {error && <div className="text-xs text-rose-600">{error}</div>}
             <div className="flex justify-end gap-2">

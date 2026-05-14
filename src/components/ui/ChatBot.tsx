@@ -16,21 +16,24 @@ interface ChatBotProps {
   setIsOpen: (isOpen: boolean) => void;
 }
 
+const GREETING: Message = {
+  id: 'greeting',
+  text: "Hi! I'm your HR Assistant. Ask me about your attendance, KPIs, leaves, rewards, or feedback — I'll answer using your latest data.",
+  sender: 'bot',
+  timestamp: new Date(),
+};
+
 export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: "Hi! I'm your HR Assistant. How can I help you today?",
-      sender: 'bot',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([GREETING]);
   const [mounted, setMounted] = useState(false);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    return () => abortRef.current?.abort();
   }, []);
 
   const scrollToBottom = () => {
@@ -43,30 +46,65 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
     }
   }, [messages, isOpen]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    const trimmed = message.trim();
+    if (!trimmed || sending) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
-      text: message,
+      id: `u-${Date.now()}`,
+      text: trimmed,
       sender: 'user',
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setMessage('');
+    setSending(true);
 
-    // Simulate bot response
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "I've received your message. An HR representative will get back to you shortly, or you can check the FAQ for common queries.",
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
+    const history = nextMessages
+      .filter((m) => m.id !== 'greeting')
+      .map((m) => ({
+        role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+        content: m.text,
+      }));
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const res = await fetch('/api/me/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+        signal: controller.signal,
+      });
+      const data = (await res.json().catch(() => null)) as { reply?: string; title?: string } | null;
+      const replyText = res.ok && data?.reply
+        ? data.reply
+        : data?.title
+          ? `Sorry — ${data.title.toLowerCase()}.`
+          : "Sorry, I couldn't reach the assistant. Please try again.";
+      setMessages((prev) => [
+        ...prev,
+        { id: `b-${Date.now()}`, text: replyText, sender: 'bot', timestamp: new Date() },
+      ]);
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `b-${Date.now()}`,
+          text: 'Network error — please check your connection and try again.',
+          sender: 'bot',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -140,6 +178,17 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
               </div>
             </div>
           ))}
+          {sending && (
+            <div className="flex w-full justify-start">
+              <div className="max-w-[85%] p-4 rounded-2xl rounded-tl-none bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 rounded-full bg-neutral-400 animate-bounce" />
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -153,19 +202,20 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-[#FF4D4D] transition-all outline-none"
+              placeholder={sending ? 'Thinking…' : 'Type your message...'}
+              disabled={sending}
+              className="w-full bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-[#FF4D4D] transition-all outline-none disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={!message.trim()}
+              disabled={!message.trim() || sending}
               className="p-3 rounded-xl bg-[#111111] dark:bg-[#FF4D4D] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="h-5 w-5" />
             </button>
           </div>
           <p className="text-[10px] text-center text-neutral-400 mt-4">
-            Powered by FairReward AI • Standard response time &lt; 2h
+            Powered by FairReward AI • Personalized to your profile
           </p>
         </form>
       </div>

@@ -26,7 +26,7 @@ export default function EmployeeLayoutClient({
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between bg-[#111111] p-4 text-white z-40 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tighter">HRM</span>
+          <span className="text-lg font-bold tracking-tight">FairReward</span>
           <div className="h-1.5 w-1.5 rounded-full bg-[#FF4D4D]"></div>
         </div>
         <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="p-1">

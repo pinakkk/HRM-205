@@ -168,6 +168,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      kpi_submissions: {
+        Row: {
+          id: number;
+          assignment_id: number;
+          user_id: string;
+          achieved: number;
+          note: string | null;
+          evidence_url: string | null;
+          status: "pending" | "approved" | "rejected";
+          decided_by: string | null;
+          decided_at: string | null;
+          decision_note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          assignment_id: number;
+          user_id: string;
+          achieved: number;
+          note?: string | null;
+          evidence_url?: string | null;
+          status?: "pending" | "approved" | "rejected";
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_note?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          assignment_id?: number;
+          user_id?: string;
+          achieved?: number;
+          note?: string | null;
+          evidence_url?: string | null;
+          status?: "pending" | "approved" | "rejected";
+          decided_by?: string | null;
+          decided_at?: string | null;
+          decision_note?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       feedback: {
         Row: {
           id: number;
@@ -626,6 +668,7 @@ export type Database = {
           full_name: string;
           avatar_url: string | null;
           department: string | null;
+          role: Role;
           balance: number;
           bonus_total: number;
         };

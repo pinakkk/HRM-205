@@ -26,19 +26,24 @@ export function currentStreak(checkInISOs: string[]): number {
 }
 
 export function attendancePercent(checkInISOs: string[], windowDays = 30): number {
+  if (checkInISOs.length === 0) return 100;
   const today = startOfDay(new Date());
-  const start = addDays(today, -(windowDays - 1));
-  let workdays = 0;
-  let present = 0;
+  const windowStart = addDays(today, -(windowDays - 1));
   const presentSet = new Set(checkInISOs.map((i) => toDateKey(new Date(i))));
-  for (let i = 0; i < windowDays; i++) {
-    const d = addDays(start, i);
+  const firstCheckIn = checkInISOs
+    .map((i) => startOfDay(new Date(i)))
+    .reduce((min, d) => (d < min ? d : min));
+  const start = firstCheckIn > windowStart ? firstCheckIn : windowStart;
+  let workdays = 0;
+  let absent = 0;
+  for (let d = new Date(start); d <= today; d = addDays(d, 1)) {
     const dow = d.getDay();
     if (dow === 0 || dow === 6) continue;
     workdays += 1;
-    if (presentSet.has(toDateKey(d))) present += 1;
+    if (!presentSet.has(toDateKey(d))) absent += 1;
   }
-  return workdays === 0 ? 0 : Math.round((present / workdays) * 100);
+  if (workdays === 0) return 100;
+  return Math.round(((workdays - absent) / workdays) * 100);
 }
 
 function toDateKey(d: Date) {

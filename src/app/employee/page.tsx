@@ -12,7 +12,6 @@ import {
   Crown,
   Flame,
   Megaphone,
-  Sparkles,
   Trophy,
 } from "lucide-react";
 
@@ -27,13 +26,12 @@ export default async function EmployeeDashboard() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [{ data: balance }, { data: recent }, { data: att }, { data: ann }, { data: eotm }] =
+  const [{ data: ledger }, { data: recent }, { data: att }, { data: ann }, { data: eotm }] =
     await Promise.all([
       supabase
-        .from("points_balance")
-        .select("balance, bonus_total, lifetime_total")
-        .eq("user_id", me.profile.id)
-        .maybeSingle(),
+        .from("rewards_ledger")
+        .select("kind, amount")
+        .eq("user_id", me.profile.id),
       supabase
         .from("rewards_ledger")
         .select("id, kind, amount, reason, created_at")
@@ -62,7 +60,8 @@ export default async function EmployeeDashboard() {
   const checkIns = (att ?? []).map((a) => a.check_in);
   const streak = currentStreak(checkIns);
   const pct = attendancePercent(checkIns, 30);
-  const lifetime = Number(balance?.lifetime_total ?? 0);
+  const balance = aggregateLedger(ledger ?? []);
+  const lifetime = balance.lifetime_total;
   const level = levelFromPoints(lifetime);
   const progress = Math.round(progressToNext(lifetime) * 100);
   const isEotm = eotm?.user_id === me.profile.id;
@@ -96,12 +95,12 @@ export default async function EmployeeDashboard() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Points balance"
-          value={formatPoints(Number(balance?.balance ?? 0))}
+          value={formatPoints(balance.balance)}
           icon={<BadgeDollarSign className="h-5 w-5" />}
         />
         <Stat
           label="Bonus YTD"
-          value={`₹${formatPoints(Number(balance?.bonus_total ?? 0))}`}
+          value={`₹${formatPoints(balance.bonus_total)}`}
           icon={<Briefcase className="h-5 w-5" />}
         />
         <Stat label="Attendance (30d)" value={`${pct}%`} icon={<Clock className="h-5 w-5" />} />
@@ -111,7 +110,6 @@ export default async function EmployeeDashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-6 dark:border-indigo-900/40 dark:from-indigo-900/20 dark:to-neutral-900">
           <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-            <Sparkles className="h-5 w-5" />
             <h3 className="font-bold">Your level</h3>
           </div>
           <div className="mt-3 text-3xl font-extrabold text-indigo-700 dark:text-indigo-200">{level.tier}</div>
@@ -198,6 +196,19 @@ export default async function EmployeeDashboard() {
       </div>
     </div>
   );
+}
+
+function aggregateLedger(rows: { kind: string; amount: number | string }[]) {
+  let balance = 0;
+  let bonus_total = 0;
+  let lifetime_total = 0;
+  for (const r of rows) {
+    const amt = Number(r.amount ?? 0);
+    lifetime_total += amt;
+    if (r.kind === "points" || r.kind === "kudos") balance += amt;
+    else if (r.kind === "bonus") bonus_total += amt;
+  }
+  return { balance, bonus_total, lifetime_total };
 }
 
 function Stat({
