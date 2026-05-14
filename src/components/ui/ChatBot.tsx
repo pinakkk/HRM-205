@@ -4,6 +4,101 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+  // Splits a single line into bold (**…**), italic (*…*), and code (`…`) spans.
+  const tokens: React.ReactNode[] = [];
+  const regex = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let i = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push(text.slice(lastIndex, match.index));
+    }
+    const k = `${keyPrefix}-${i++}`;
+    if (match[2] !== undefined) {
+      tokens.push(<strong key={k}>{match[2]}</strong>);
+    } else if (match[3] !== undefined) {
+      tokens.push(<em key={k}>{match[3]}</em>);
+    } else if (match[4] !== undefined) {
+      tokens.push(
+        <code
+          key={k}
+          className="rounded bg-neutral-100 dark:bg-neutral-700 px-1 py-0.5 text-[12px] font-mono"
+        >
+          {match[4]}
+        </code>,
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) tokens.push(text.slice(lastIndex));
+  return tokens;
+}
+
+function FormattedMessage({ text }: { text: string }) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const blocks: React.ReactNode[] = [];
+  let listItems: string[] = [];
+  let listType: 'ul' | 'ol' | null = null;
+  let blockKey = 0;
+
+  function flushList() {
+    if (!listType || listItems.length === 0) {
+      listItems = [];
+      listType = null;
+      return;
+    }
+    const items = listItems.map((li, idx) => (
+      <li key={idx}>{renderInline(li, `li-${blockKey}-${idx}`)}</li>
+    ));
+    blocks.push(
+      listType === 'ul' ? (
+        <ul key={`b-${blockKey++}`} className="list-disc pl-5 space-y-1">
+          {items}
+        </ul>
+      ) : (
+        <ol key={`b-${blockKey++}`} className="list-decimal pl-5 space-y-1">
+          {items}
+        </ol>
+      ),
+    );
+    listItems = [];
+    listType = null;
+  }
+
+  for (let raw of lines) {
+    const line = raw.trimEnd();
+    const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+    const numbered = line.match(/^\s*\d+\.\s+(.*)$/);
+    if (bullet) {
+      if (listType && listType !== 'ul') flushList();
+      listType = 'ul';
+      listItems.push(bullet[1]);
+      continue;
+    }
+    if (numbered) {
+      if (listType && listType !== 'ol') flushList();
+      listType = 'ol';
+      listItems.push(numbered[1]);
+      continue;
+    }
+    flushList();
+    if (line.trim() === '') {
+      // Empty line: render a small spacer between paragraphs.
+      blocks.push(<div key={`b-${blockKey++}`} className="h-1" />);
+      continue;
+    }
+    blocks.push(
+      <p key={`b-${blockKey++}`} className="leading-relaxed">
+        {renderInline(line, `p-${blockKey}`)}
+      </p>,
+    );
+  }
+  flushList();
+  return <div className="space-y-2">{blocks}</div>;
+}
+
 interface Message {
   id: string;
   text: string;
@@ -168,9 +263,13 @@ export const ChatBot = ({ isOpen, setIsOpen }: ChatBotProps) => {
                     : "bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-tl-none border border-neutral-100 dark:border-neutral-700"
                 )}
               >
-                {msg.text}
+                {msg.sender === 'bot' ? (
+                  <FormattedMessage text={msg.text} />
+                ) : (
+                  <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                )}
                 <p className={cn(
-                  "text-[10px] mt-1 opacity-70",
+                  "text-[10px] mt-2 opacity-70",
                   msg.sender === 'user' ? "text-right" : "text-left"
                 )}>
                   {mounted ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
